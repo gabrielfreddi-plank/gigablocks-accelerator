@@ -8,11 +8,25 @@
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
-    "typescript": "5.9.2"
+    "@repo/vitest-config": "workspace:*",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/react": "19.2.2",
+    "@types/react-dom": "19.2.2",
+    "@vitest/coverage-v8": "^4.1.4",
+    "jsdom": "^29.0.2",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "typescript": "5.9.2",
+    "vitest": "^4.1.4"
   }
 }

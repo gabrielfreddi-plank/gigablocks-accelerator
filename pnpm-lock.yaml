@@ -184,9 +184,18 @@ importers:
       '@repo/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
+      '@repo/vitest-config':
+        specifier: workspace:*
+        version: link:../vitest-config
+      '@vitest/coverage-v8':
+        specifier: ^4.1.4
+        version: 4.1.4(vitest@4.1.4)
       typescript:
         specifier: 5.9.2
         version: 5.9.2
+      vitest:
+        specifier: ^4.1.4
+        version: 4.1.4(@types/node@22.15.3)(@vitest/coverage-v8@4.1.4)(jsdom@29.0.2)(vite@7.3.2(@types/node@22.15.3))
 
   packages/embed-react:
     devDependencies:
@@ -196,9 +205,42 @@ importers:
       '@repo/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
+      '@repo/vitest-config':
+        specifier: workspace:*
+        version: link:../vitest-config
+      '@testing-library/jest-dom':
+        specifier: ^6.9.1
+        version: 6.9.1
+      '@testing-library/react':
+        specifier: ^16.3.0
+        version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
+      '@testing-library/user-event':
+        specifier: ^14.6.1
+        version: 14.6.1(@testing-library/dom@10.4.1)
+      '@types/react':
+        specifier: 19.2.2
+        version: 19.2.2
+      '@types/react-dom':
+        specifier: 19.2.2
+        version: 19.2.2(@types/react@19.2.2)
+      '@vitest/coverage-v8':
+        specifier: ^4.1.4
+        version: 4.1.4(vitest@4.1.4)
+      jsdom:
+        specifier: ^29.0.2
+        version: 29.0.2
+      react:
+        specifier: ^19.2.0
+        version: 19.2.0
+      react-dom:
+        specifier: ^19.2.0
+        version: 19.2.0(react@19.2.0)
       typescript:
         specifier: 5.9.2
         version: 5.9.2
+      vitest:
+        specifier: ^4.1.4
+        version: 4.1.4(@types/node@22.15.3)(@vitest/coverage-v8@4.1.4)(jsdom@29.0.2)(vite@7.3.2(@types/node@22.15.3))
 
   packages/eslint-config:
     devDependencies:
@@ -244,9 +286,18 @@ importers:
       '@repo/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
+      '@repo/vitest-config':
+        specifier: workspace:*
+        version: link:../vitest-config
+      '@vitest/coverage-v8':
+        specifier: ^4.1.4
+        version: 4.1.4(vitest@4.1.4)
       typescript:
         specifier: 5.9.2
         version: 5.9.2
+      vitest:
+        specifier: ^4.1.4
+        version: 4.1.4(@types/node@22.15.3)(@vitest/coverage-v8@4.1.4)(jsdom@29.0.2)(vite@7.3.2(@types/node@22.15.3))
 
   packages/typescript-config: {}
 
@@ -265,6 +316,18 @@ importers:
       '@repo/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
+      '@repo/vitest-config':
+        specifier: workspace:*
+        version: link:../vitest-config
+      '@testing-library/jest-dom':
+        specifier: ^6.9.1
+        version: 6.9.1
+      '@testing-library/react':
+        specifier: ^16.3.0
+        version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
+      '@testing-library/user-event':
+        specifier: ^14.6.1
+        version: 14.6.1(@testing-library/dom@10.4.1)
       '@types/node':
         specifier: ^22.15.3
         version: 22.15.3
@@ -274,12 +337,21 @@ importers:
       '@types/react-dom':
         specifier: 19.2.2
         version: 19.2.2(@types/react@19.2.2)
+      '@vitest/coverage-v8':
+        specifier: ^4.1.4
+        version: 4.1.4(vitest@4.1.4)
       eslint:
         specifier: ^9.39.1
         version: 9.39.1
+      jsdom:
+        specifier: ^29.0.2
+        version: 29.0.2
       typescript:
         specifier: 5.9.2
         version: 5.9.2
+      vitest:
+        specifier: ^4.1.4
+        version: 4.1.4(@types/node@22.15.3)(@vitest/coverage-v8@4.1.4)(jsdom@29.0.2)(vite@7.3.2(@types/node@22.15.3))
 
   packages/vitest-config:
     devDependencies:
