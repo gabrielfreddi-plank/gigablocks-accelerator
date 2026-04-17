@@ -1,0 +1,27 @@
+{
+  "name": "@repo/vitest-config",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "typesVersions": {
+    "*": {
+      "node": ["./node.d.ts"],
+      "web": ["./web.d.ts"]
+    }
+  },
+  "exports": {
+    "./node": {
+      "types": "./node.d.ts",
+      "import": "./node.js",
+      "default": "./node.js"
+    },
+    "./web": {
+      "types": "./web.d.ts",
+      "import": "./web.js",
+      "default": "./web.js"
+    }
+  },
+  "devDependencies": {
+    "vitest": "^3.2.4"
+  }
+}

@@ -35,6 +35,7 @@ gigablocks/
 ├── packages/embed-react/ # stub
 ├── packages/tsconfig/ # shared tsconfig
 ├── packages/eslint-config/
+├── packages/vitest-config/
 ├── turbo.json
 ├── pnpm-workspace.yaml
 └── package.json
