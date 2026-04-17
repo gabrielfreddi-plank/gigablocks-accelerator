@@ -1,10 +1,14 @@
 import React from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { Button } from "@repo/ui/button";
 
 describe("Button", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it("renders and triggers click behavior", async () => {
     const alertMock = vi.fn();
     vi.stubGlobal("alert", alertMock);
@@ -17,7 +21,5 @@ describe("Button", () => {
     await user.click(button);
 
     expect(alertMock).toHaveBeenCalledWith("Hello from your web app!");
-
-    vi.unstubAllGlobals();
   });
 });
