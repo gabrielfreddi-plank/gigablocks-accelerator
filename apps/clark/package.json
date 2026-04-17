@@ -7,11 +7,17 @@
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "dev": "node dist/index.js"
+    "dev": "node dist/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
-    "typescript": "5.9.2"
+    "@repo/vitest-config": "workspace:*",
+    "@vitest/coverage-v8": "^4.1.4",
+    "typescript": "5.9.2",
+    "vitest": "^4.1.4"
   }
 }
