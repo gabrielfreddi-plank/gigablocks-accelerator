@@ -1,6 +1,7 @@
 {
   "$schema": "https://turborepo.dev/schema.json",
   "ui": "tui",
+  "globalEnv": ["CI"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
@@ -21,6 +22,14 @@
     "dev": {
       "cache": false,
       "persistent": true
+    },
+    "test:e2e": {
+      "cache": false,
+      "inputs": ["$TURBO_DEFAULT$", "tests/**", "playwright*.ts"]
+    },
+    "test:integration": {
+      "cache": false,
+      "inputs": ["$TURBO_DEFAULT$", "tests/**", "playwright*.ts"]
     }
   }
 }

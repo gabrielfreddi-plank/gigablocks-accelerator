@@ -6,6 +6,7 @@ export default mergeConfig(
   defineConfig({
     test: {
       setupFiles: ["./vitest.setup.ts"],
+      exclude: ["tests/**", "node_modules/**"],
     },
   }),
 );
