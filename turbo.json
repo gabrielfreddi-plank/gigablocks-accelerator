@@ -21,6 +21,14 @@
     "dev": {
       "cache": false,
       "persistent": true
+    },
+    "test:e2e": {
+      "cache": false,
+      "inputs": ["$TURBO_DEFAULT$", "tests/**", "playwright*.ts"]
+    },
+    "test:integration": {
+      "cache": false,
+      "inputs": ["$TURBO_DEFAULT$", "tests/**", "playwright*.ts"]
     }
   }
 }
