@@ -9,6 +9,8 @@ jobs:
     name: Deploy to Vercel Preview
     runs-on: ubuntu-latest
     environment: preview
+    permissions:
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
