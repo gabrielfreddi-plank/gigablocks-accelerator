@@ -7,7 +7,7 @@ export const nodeConfig = defineConfig({
     exclude: ["**/dist/**", "**/node_modules/**", "**/.next/**"],
     coverage: {
       provider: "v8",
-      reporter: ["text", "html"],
+      reporter: ["text"],
     },
   },
 });
