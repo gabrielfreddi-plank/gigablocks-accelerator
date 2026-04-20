@@ -7,6 +7,7 @@ export default mergeConfig(
     test: {
       setupFiles: ["./vitest.setup.ts"],
       exclude: ["tests/**", "node_modules/**"],
+      passWithNoTests: true,
     },
   }),
 );
