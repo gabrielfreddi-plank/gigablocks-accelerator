@@ -1,3 +1,10 @@
+import { Navbar } from "@/components/marketing/Navbar"
+
 export default function MarketingPage() {
-  return <main>Homepage</main>;
+  return (
+    <>
+      <Navbar />
+      <main>Homepage</main>
+    </>
+  )
 }
