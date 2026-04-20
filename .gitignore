@@ -27,6 +27,16 @@ out/
 build
 dist
 
+# Next.js generated
+next-env.d.ts
+
+# TypeScript
+*.tsbuildinfo
+
+# Cache
+.swc/
+.cache/
+
 
 # Debug
 npm-debug.log*
