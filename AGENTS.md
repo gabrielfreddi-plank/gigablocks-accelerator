@@ -120,6 +120,10 @@ pnpm test         # vitest
 pnpm test:e2e     # playwright
 ```
 
+## Language
+
+**All copy in this project must be written in English** — UI labels, button text, error messages, comments, documentation, commit messages, and PR descriptions. No Portuguese (or any other language) in new content.
+
 ## Conventions
 
 - New product modules → new route group at `apps/home/src/app/(module)/`
