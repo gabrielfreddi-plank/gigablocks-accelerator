@@ -6,10 +6,10 @@ Turborepo + pnpm workspaces.
 
 ```
 apps/
-  home/         # Next.js 16 — app principal (Vercel) — porta 3000
+  home/         # Next.js 16 — main app (Vercel) — port 3000
   docs/         # Next.js docs
-  clark/        # Node — AI agent service (não vai para o Vercel)
-  data-plane/   # Node — data execution service (não vai para o Vercel)
+  clark/        # Node — AI agent service (not deployed to Vercel)
+  data-plane/   # Node — data execution service (not deployed to Vercel)
 packages/
   ui/           # Shared component library (@repo/ui)
   db/           # Shared Supabase client + types (@repo/db)
@@ -18,47 +18,47 @@ packages/
   vitest-config/
 ```
 
-## Arquitetura de deploy
+## Deployment Architecture
 
-**Um único app Next.js no Vercel (`apps/home`).** Novos módulos = novos route groups dentro de `apps/home/src/app/`. Não criar novos apps no Vercel para funcionalidades da aplicação.
+**A single Next.js app on Vercel (`apps/home`).** New modules = new route groups inside `apps/home/src/app/`. Do not create new Vercel apps for application features.
 
 ```
 apps/home/src/app/
-  (marketing)/      # landing page pública
+  (marketing)/      # public landing page
   (auth)/           # sign-in, sign-up, onboarding
-  (dashboard)/      # app principal (em breve)
-  (settings)/       # configurações (futuro)
-  (billing)/        # planos/pagamento (futuro)
+  (dashboard)/      # main app (coming soon)
+  (settings)/       # settings (future)
+  (billing)/        # plans/payments (future)
 ```
 
-`vercel.json` na raiz já está configurado — não precisa alterar para adicionar novos route groups.
+`vercel.json` at the repo root is already configured — no changes needed when adding new route groups.
 
-## apps/home — estrutura
+## apps/home — Structure
 
 ```
 src/
   app/
-    layout.tsx              # Root layout — fonte Geist
+    layout.tsx              # Root layout — Geist font
     globals.css
     (marketing)/
-      layout.tsx            # Layout isolado — Inter, bg-black, sem sidebar
+      layout.tsx            # Isolated layout — Inter, bg-black, no sidebar
       page.tsx              # Marketing homepage
     (auth)/
-      layout.tsx            # Layout centralizado — bg-[#0c0c0e]
+      layout.tsx            # Centered layout — bg-[#0c0c0e]
       sign-in/page.tsx
       sign-up/page.tsx
       onboarding/page.tsx
     auth/callback/route.ts  # OAuth/magic-link handler
   components/
     ui/
-      button.tsx            # Botão com CVA + @base-ui/react (NÃO é o shadcn padrão)
+      button.tsx            # Button with CVA + @base-ui/react (NOT standard shadcn)
       input.tsx             # shadcn Input
       label.tsx             # shadcn Label
       card.tsx              # shadcn Card
-      auth-input.tsx        # Label + Input composto para formulários auth
+      auth-input.tsx        # Composed Label + Input for auth forms
     marketing/
-      Section.tsx           # Wrapper de seção — px-6 py-24 max-w-7xl mx-auto
-      SectionLabel.tsx      # Label azul uppercase tracking-widest
+      Section.tsx           # Section wrapper — px-6 py-24 max-w-7xl mx-auto
+      SectionLabel.tsx      # Blue uppercase label with tracking-widest
   lib/
     utils.ts                # cn() via clsx + tailwind-merge
     actions/
@@ -66,66 +66,66 @@ src/
     supabase/
       client.ts             # Browser client (@supabase/ssr)
       server.ts             # Server client (@supabase/ssr)
-      types.ts              # Tipos gerados do schema Supabase
+      types.ts              # Generated types from Supabase schema
     data/
-      features.ts           # Feature[] — 6 cards para o Features Grid
-      how-it-works.ts       # Step[] — 4 steps para How It Works
-  proxy.ts                  # Next.js 16 proxy — session refresh + proteção de rotas
+      features.ts           # Feature[] — 6 cards for the Features Grid
+      how-it-works.ts       # Step[] — 4 steps for How It Works
+  proxy.ts                  # Next.js 16 proxy — session refresh + route protection
 ```
 
 ## Stack
 
-| Tech | Versão | Notas |
+| Tech | Version | Notes |
 |---|---|---|
-| Next.js | 16.2.0 | App Router, Server Components por padrão |
+| Next.js | 16.2.0 | App Router, Server Components by default |
 | React | 19.2.0 | |
-| Tailwind CSS | 4.2.2 | Via `@tailwindcss/postcss` — sem `tailwind.config.js` |
+| Tailwind CSS | 4.2.2 | Via `@tailwindcss/postcss` — no `tailwind.config.js` |
 | shadcn/ui | 4.3.0 | Style: Default, Base: Zinc, dark mode via `.dark` |
 | Supabase | @supabase/ssr ^0.10.2 | Auth + DB |
-| TypeScript | strict | `@/*` aponta para `apps/home/src/` |
-| Fonte | Inter | Carregada via `next/font/google` no layout de marketing |
-| Animações | tw-animate-css | |
+| TypeScript | strict | `@/*` points to `apps/home/src/` |
+| Font | Inter | Loaded via `next/font/google` in the marketing layout |
+| Animations | tw-animate-css | |
 
-## Supabase — schema público
+## Supabase — Public Schema
 
-| Tabela | Descrição |
+| Table | Description |
 |--------|-----------|
-| `usuarios` | Perfil do usuário (auto-criado via trigger em `auth.users`) |
-| `empresas` | Organização criada no onboarding |
-| `empresa_membros` | Membros por empresa com `role` (owner auto-inserido via trigger) |
-| `documentos` | Documentos por empresa |
+| `usuarios` | User profile (auto-created via trigger on `auth.users` insert) |
+| `empresas` | Organization created during onboarding |
+| `empresa_membros` | Company members with `role` (owner auto-inserted via trigger) |
+| `documentos` | Documents per company |
 
-## CSS / Design tokens
+## CSS / Design Tokens
 
-- Arquivo: `src/app/globals.css`
-- Cores em OKLch, CSS custom properties
-- Dark theme ativo por padrão (bg-black text-white)
-- Zinc como base: `zinc-400` body, `zinc-700` bordas, `zinc-800/900` cards
-- Azul de ação: `blue-500` / `blue-600` hover
+- File: `src/app/globals.css`
+- Colors in OKLch, CSS custom properties
+- Dark theme active by default (bg-black text-white)
+- Zinc as base: `zinc-400` body, `zinc-700` borders, `zinc-800/900` cards
+- Action blue: `blue-500` / `blue-600` hover
 
-## Comandos
+## Commands
 
 ```bash
-# Na raiz (Turborepo)
-pnpm dev          # roda todos os apps
+# At the repo root (Turborepo)
+pnpm dev          # runs all apps
 pnpm build
 pnpm lint
 pnpm typecheck
 
-# Em apps/home
-pnpm dev          # porta 3000
+# Inside apps/home
+pnpm dev          # port 3000
 pnpm typecheck    # next typegen && tsc --noEmit
 pnpm lint         # eslint --max-warnings 0
 pnpm test         # vitest
 pnpm test:e2e     # playwright
 ```
 
-## Convenções
+## Conventions
 
-- Novos módulos do produto → novo route group em `apps/home/src/app/(modulo)/`
-- Novos componentes de marketing → `src/components/marketing/`
-- Dados estáticos → `src/lib/data/` como arrays tipados exportados
-- Reutilizar `Section` e `SectionLabel` em todas as seções de marketing
-- `cn()` de `@/lib/utils` para merge de classes Tailwind
-- Commits: `feat:`, `chore:`, `fix:` + referência à issue (ex: `[THA-13]`)
-- Prefixo de issues: `THA-` para Thales, `LUC-` para Lucas
+- New product modules → new route group at `apps/home/src/app/(module)/`
+- New marketing components → `src/components/marketing/`
+- Static data → `src/lib/data/` as typed exported arrays
+- Reuse `Section` and `SectionLabel` across all marketing sections
+- `cn()` from `@/lib/utils` for Tailwind class merging
+- Commits: `feat:`, `chore:`, `fix:` + issue reference (e.g. `[THA-13]`)
+- Issue prefixes: `THA-` for Thales, `LUC-` for Lucas
