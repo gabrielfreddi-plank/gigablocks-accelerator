@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
 const navLinks = [
@@ -64,16 +63,17 @@ export function Navbar() {
           {/* Desktop actions */}
           <div className="hidden md:flex items-center gap-3">
             <Link
-              href="#"
+              href="/sign-in"
               className="text-sm text-zinc-400 transition-colors hover:text-zinc-50"
             >
               Sign in
             </Link>
-            <Button
+            <Link
+              href="/sign-up"
               className="rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-600 transition-colors"
             >
               Get started
-            </Button>
+            </Link>
           </div>
 
           {/* Mobile hamburger */}
@@ -117,17 +117,19 @@ export function Navbar() {
           ))}
           <div className="mt-4 flex flex-col gap-2 border-t border-white/10 pt-4">
             <Link
-              href="#"
+              href="/sign-in"
               className="py-2 text-sm text-zinc-400 transition-colors hover:text-zinc-50"
               onClick={() => setMobileOpen(false)}
             >
               Sign in
             </Link>
-            <Button
-              className="w-full rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-600 transition-colors"
+            <Link
+              href="/sign-up"
+              className="w-full rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-600 transition-colors text-center"
+              onClick={() => setMobileOpen(false)}
             >
               Get started
-            </Button>
+            </Link>
           </div>
         </nav>
       </div>
