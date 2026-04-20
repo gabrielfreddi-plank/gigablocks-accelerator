@@ -127,7 +127,7 @@ Structure inside `src/app/(auth)/`:
 
 ```
 src/app/(auth)/
-  layout.tsx          # Centered layout — clean, sem Navbar
+  layout.tsx          # Centered layout — clean, no Navbar
   sign-in/
     page.tsx          # Sign in form
   sign-up/
