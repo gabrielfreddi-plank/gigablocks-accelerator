@@ -1,5 +1,8 @@
 import Image, { type ImageProps } from "next/image";
+import Link from "next/link";
 import { Button } from "@repo/ui/button";
+import { createClient } from "@/lib/supabase/server";
+import { signOut } from "@/actions/auth";
 import styles from "./page.module.css";
 
 type Props = Omit<ImageProps, "src"> & {
@@ -18,7 +21,10 @@ const ThemeImage = (props: Props) => {
   );
 };
 
-export default function Home() {
+export default async function Home() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
   return (
     <div className={styles.page}>
       <main className={styles.main}>
@@ -66,6 +72,36 @@ export default function Home() {
         <Button appName="web" className={styles.secondary}>
           Open alert
         </Button>
+
+        <div className="mt-6 flex items-center gap-4 rounded-lg border border-zinc-700 bg-zinc-900 px-5 py-4 text-sm">
+          {user ? (
+            <>
+              <span className="text-zinc-300">
+                Olá, <span className="font-medium text-white">{user.user_metadata.full_name ?? user.email}</span>
+              </span>
+              <form action={signOut} className="ml-auto">
+                <button
+                  type="submit"
+                  className="rounded-md bg-zinc-700 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-zinc-600"
+                >
+                  Sair
+                </button>
+              </form>
+            </>
+          ) : (
+            <>
+              <span className="text-zinc-400">Você não está logado.</span>
+              <div className="ml-auto flex gap-3">
+                <Link href="/login" className="rounded-md bg-zinc-700 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-zinc-600">
+                  Entrar
+                </Link>
+                <Link href="/signup" className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-500">
+                  Criar conta
+                </Link>
+              </div>
+            </>
+          )}
+        </div>
       </main>
       <footer className={styles.footer}>
         <a
