@@ -35,24 +35,24 @@ export default function SignInPage() {
             <rect x="15" y="15" width="6" height="6" rx="1" fill="white" />
           </svg>
         </div>
-        <CardTitle className="text-center text-xl font-semibold">Entrar</CardTitle>
+        <CardTitle className="text-center text-xl font-semibold">Sign in</CardTitle>
         <CardDescription className="text-center text-zinc-400">
-          Acesse sua conta Gigablocks
+          Access your Gigablocks account
         </CardDescription>
       </CardHeader>
 
       <CardContent>
         <form id="sign-in-form" action={action} className="flex flex-col gap-4">
           <AuthInput
-            label="E-mail"
+            label="Email"
             name="email"
             type="email"
-            placeholder="voce@empresa.com"
+            placeholder="you@company.com"
             required
             autoComplete="email"
           />
           <AuthInput
-            label="Senha"
+            label="Password"
             name="password"
             type="password"
             placeholder="••••••••"
@@ -71,16 +71,16 @@ export default function SignInPage() {
             disabled={pending}
             className="mt-1 w-full rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2.5 text-sm font-medium text-white transition-colors"
           >
-            {pending ? "Entrando..." : "Entrar"}
+            {pending ? "Signing in..." : "Sign in"}
           </button>
         </form>
       </CardContent>
 
       <CardFooter className="justify-center pb-6">
         <p className="text-sm text-zinc-500">
-          Não tem uma conta?{" "}
+          Don&apos;t have an account?{" "}
           <Link href="/sign-up" className="text-blue-400 hover:text-blue-300 transition-colors">
-            Criar conta
+            Create account
           </Link>
         </p>
       </CardFooter>

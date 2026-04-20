@@ -35,35 +35,35 @@ export default function SignUpPage() {
             <rect x="15" y="15" width="6" height="6" rx="1" fill="white" />
           </svg>
         </div>
-        <CardTitle className="text-center text-xl font-semibold">Criar conta</CardTitle>
+        <CardTitle className="text-center text-xl font-semibold">Create account</CardTitle>
         <CardDescription className="text-center text-zinc-400">
-          Passo 1 de 2 — Dados pessoais
+          Step 1 of 2 — Personal details
         </CardDescription>
       </CardHeader>
 
       <CardContent>
         <form action={action} className="flex flex-col gap-4">
           <AuthInput
-            label="Nome"
-            name="nome"
+            label="Name"
+            name="name"
             type="text"
-            placeholder="Seu nome"
+            placeholder="Your name"
             required
             autoComplete="name"
           />
           <AuthInput
-            label="E-mail"
+            label="Email"
             name="email"
             type="email"
-            placeholder="voce@empresa.com"
+            placeholder="you@company.com"
             required
             autoComplete="email"
           />
           <AuthInput
-            label="Senha"
+            label="Password"
             name="password"
             type="password"
-            placeholder="Mínimo 8 caracteres"
+            placeholder="Minimum 8 characters"
             required
             minLength={8}
             autoComplete="new-password"
@@ -80,16 +80,16 @@ export default function SignUpPage() {
             disabled={pending}
             className="mt-1 w-full rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2.5 text-sm font-medium text-white transition-colors"
           >
-            {pending ? "Criando conta..." : "Continuar"}
+            {pending ? "Creating account..." : "Continue"}
           </button>
         </form>
       </CardContent>
 
       <CardFooter className="justify-center pb-6">
         <p className="text-sm text-zinc-500">
-          Já tem uma conta?{" "}
+          Already have an account?{" "}
           <Link href="/sign-in" className="text-blue-400 hover:text-blue-300 transition-colors">
-            Entrar
+            Sign in
           </Link>
         </p>
       </CardFooter>
