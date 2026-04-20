@@ -38,17 +38,17 @@ function SyntaxCode() {
     <code className="font-mono text-[13px] text-[#d4d4d8] block">
       <CodeLine><Cmt>{"// UserTable.tsx"}</Cmt></CodeLine>
       <CodeLine><K>import </K><Punct>{"{"}</Punct> <Fn>useState</Fn> <Punct>{"}"}</Punct> <K>from </K><Str>{'"react"'}</Str><Punct>;</Punct></CodeLine>
-      <CodeLine />
+      <CodeLine>{" "}</CodeLine>
       <CodeLine><K>type </K><Fn>User</Fn> <Punct>{"= {"}</Punct></CodeLine>
       <CodeLine>{"  "}<Attr>id</Attr><Punct>:</Punct> <K>number</K><Punct>;</Punct></CodeLine>
       <CodeLine>{"  "}<Attr>name</Attr><Punct>:</Punct> <K>string</K><Punct>;</Punct></CodeLine>
       <CodeLine>{"  "}<Attr>role</Attr><Punct>:</Punct> <K>string</K><Punct>;</Punct></CodeLine>
       <CodeLine>{"  "}<Attr>status</Attr><Punct>:</Punct> <Str>{'"active"'}</Str> <Punct>|</Punct> <Str>{'"away"'}</Str><Punct>;</Punct></CodeLine>
       <CodeLine><Punct>{"}"}</Punct></CodeLine>
-      <CodeLine />
+      <CodeLine>{" "}</CodeLine>
       <CodeLine><K>export default function </K><Fn>UserTable</Fn><Punct>{"() {"}</Punct></CodeLine>
       <CodeLine>{"  "}<K>const </K><Punct>[</Punct><Attr>users</Attr><Punct>]</Punct> <Punct>=</Punct> <Fn>useState</Fn><Punct>{"<"}</Punct><Fn>User</Fn><Punct>{"[]>"}</Punct><Punct>{"([])"}</Punct></CodeLine>
-      <CodeLine />
+      <CodeLine>{" "}</CodeLine>
       <CodeLine>{"  "}<K>return </K><Punct>{"("}</Punct></CodeLine>
       <CodeLine>{"    "}<Punct>{"<"}</Punct><Tag>div</Tag> <Attr>className</Attr><Punct>=</Punct><Str>{'"table-wrap"'}</Str><Punct>{">"}</Punct></CodeLine>
       <CodeLine>{"      "}<Punct>{"<"}</Punct><Tag>table</Tag><Punct>{">"}</Punct></CodeLine>
@@ -61,7 +61,7 @@ function SyntaxCode() {
       <CodeLine>{"    "}<Punct>{"</"}</Punct><Tag>div</Tag><Punct>{">"}</Punct></CodeLine>
       <CodeLine>{"  "}<Punct>{")"}</Punct></CodeLine>
       <CodeLine><Punct>{"}"}</Punct></CodeLine>
-      <CodeLine />
+      <CodeLine>{" "}</CodeLine>
       <CodeLine><Cmt>{"// lines: "}</Cmt><Num>24</Num></CodeLine>
     </code>
   );
