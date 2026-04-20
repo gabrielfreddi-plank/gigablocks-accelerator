@@ -1,10 +1,13 @@
-import { Navbar } from "@/components/marketing/Navbar"
+import { Navbar } from "@/components/marketing/Navbar";
+import { Hero } from "@/components/marketing/Hero";
 
 export default function MarketingPage() {
   return (
     <>
       <Navbar />
-      <main>Homepage</main>
+      <main>
+        <Hero />
+      </main>
     </>
-  )
+  );
 }
