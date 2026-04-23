@@ -50,6 +50,15 @@ const sql = postgres(DATABASE_URL, {
 });
 
 // ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function paginationNote(label: string, returned: number, total: number, nextQuery: string): string | null {
+  if (returned >= total) return null;
+  return `ℹ️  ${label}: showing ${returned}/${total} — ${total - returned} remaining. Use query tool: ${nextQuery}`;
+}
+
+// ---------------------------------------------------------------------------
 // MCP Server
 // ---------------------------------------------------------------------------
 
@@ -459,7 +468,7 @@ server.registerTool(
   },
   async ({ empresa_id, detail }) => {
     try {
-      const [company, members, documents] = await Promise.all([
+      const [company, memberCount, members, docCount, documents] = await Promise.all([
         detail === "concise"
           ? sql`
               SELECT e.nome, u.nome AS owner
@@ -474,6 +483,8 @@ server.registerTool(
               WHERE e.id = ${empresa_id}
             `,
 
+        sql`SELECT COUNT(*)::int AS n FROM public.empresa_membros WHERE empresa_id = ${empresa_id}`,
+
         detail === "concise"
           ? sql`
               SELECT u.nome AS member, em.role
@@ -481,6 +492,7 @@ server.registerTool(
               JOIN public.usuarios u ON u.id = em.usuario_id
               WHERE em.empresa_id = ${empresa_id}
               ORDER BY em.created_at
+              LIMIT 50
             `
           : sql`
               SELECT u.id AS usuario_id, u.nome AS member, em.role, em.created_at AS joined_at
@@ -488,11 +500,14 @@ server.registerTool(
               JOIN public.usuarios u ON u.id = em.usuario_id
               WHERE em.empresa_id = ${empresa_id}
               ORDER BY em.created_at
+              LIMIT 50
             `,
 
+        sql`SELECT COUNT(*)::int AS n FROM public.documentos WHERE empresa_id = ${empresa_id}`,
+
         detail === "concise"
-          ? sql`SELECT nome FROM public.documentos WHERE empresa_id = ${empresa_id} ORDER BY created_at DESC`
-          : sql`SELECT id, nome, created_at FROM public.documentos WHERE empresa_id = ${empresa_id} ORDER BY created_at DESC`,
+          ? sql`SELECT nome FROM public.documentos WHERE empresa_id = ${empresa_id} ORDER BY created_at DESC LIMIT 50`
+          : sql`SELECT id, nome, created_at FROM public.documentos WHERE empresa_id = ${empresa_id} ORDER BY created_at DESC LIMIT 50`,
       ]);
 
       if (company.length === 0) {
@@ -510,20 +525,32 @@ server.registerTool(
         };
       }
 
+      const totalMembers = memberCount[0].n;
+      const totalDocs = docCount[0].n;
+
+      const memberNote = paginationNote(
+        "members",
+        members.length,
+        totalMembers,
+        `SELECT u.nome, em.role FROM empresa_membros em JOIN usuarios u ON u.id = em.usuario_id WHERE em.empresa_id = '${empresa_id}' ORDER BY em.created_at OFFSET 50 LIMIT 50`
+      );
+      const docNote = paginationNote(
+        "documents",
+        documents.length,
+        totalDocs,
+        `SELECT id, nome FROM documentos WHERE empresa_id = '${empresa_id}' ORDER BY created_at DESC OFFSET 50 LIMIT 50`
+      );
+
       const result = { company: company[0], members, documents };
-      return {
-        content: [
-          {
-            type: "text",
-            text: [
-              `✅ Company "${company[0].nome}": ${members.length} member(s), ${documents.length} document(s).`,
-              "```json",
-              JSON.stringify(result, null, 2),
-              "```",
-            ].join("\n"),
-          },
-        ],
-      };
+      const lines = [
+        `✅ Company "${company[0].nome}": showing ${members.length}/${totalMembers} member(s), ${documents.length}/${totalDocs} document(s).`,
+        ...[memberNote, docNote].filter(Boolean),
+        "```json",
+        JSON.stringify(result, null, 2),
+        "```",
+      ];
+
+      return { content: [{ type: "text", text: lines.join("\n") }] };
     } catch (err) {
       return {
         content: [
@@ -575,9 +602,16 @@ server.registerTool(
   },
   async ({ usuario_id, detail }) => {
     try {
-      const rows =
+      const [totalRes, rows] = await Promise.all([
+        sql`
+          SELECT COUNT(*)::int AS n
+          FROM public.empresas e
+          LEFT JOIN public.empresa_membros em ON em.empresa_id = e.id AND em.usuario_id = ${usuario_id}
+          WHERE e.usuario_id = ${usuario_id} OR em.usuario_id = ${usuario_id}
+        `,
+
         detail === "concise"
-          ? await sql`
+          ? sql`
               SELECT
                 e.nome AS company,
                 CASE WHEN e.usuario_id = ${usuario_id} THEN 'owner' ELSE em.role END AS role
@@ -585,8 +619,9 @@ server.registerTool(
               LEFT JOIN public.empresa_membros em ON em.empresa_id = e.id AND em.usuario_id = ${usuario_id}
               WHERE e.usuario_id = ${usuario_id} OR em.usuario_id = ${usuario_id}
               ORDER BY e.created_at DESC
+              LIMIT 50
             `
-          : await sql`
+          : sql`
               SELECT
                 e.id AS company_id,
                 e.nome AS company,
@@ -596,7 +631,11 @@ server.registerTool(
               LEFT JOIN public.empresa_membros em ON em.empresa_id = e.id AND em.usuario_id = ${usuario_id}
               WHERE e.usuario_id = ${usuario_id} OR em.usuario_id = ${usuario_id}
               ORDER BY e.created_at DESC
-            `;
+              LIMIT 50
+            `,
+      ]);
+
+      const total = totalRes[0].n;
 
       if (rows.length === 0) {
         return {
@@ -612,19 +651,22 @@ server.registerTool(
         };
       }
 
-      return {
-        content: [
-          {
-            type: "text",
-            text: [
-              `✅ ${rows.length} company(ies) for this user.`,
-              "```json",
-              JSON.stringify(rows, null, 2),
-              "```",
-            ].join("\n"),
-          },
-        ],
-      };
+      const note = paginationNote(
+        "companies",
+        rows.length,
+        total,
+        `SELECT e.nome, em.role FROM empresas e LEFT JOIN empresa_membros em ON em.empresa_id = e.id AND em.usuario_id = '${usuario_id}' WHERE e.usuario_id = '${usuario_id}' OR em.usuario_id = '${usuario_id}' ORDER BY e.created_at DESC OFFSET 50 LIMIT 50`
+      );
+
+      const lines = [
+        `✅ showing ${rows.length}/${total} company(ies) for this user.`,
+        ...(note ? [note] : []),
+        "```json",
+        JSON.stringify(rows, null, 2),
+        "```",
+      ];
+
+      return { content: [{ type: "text", text: lines.join("\n") }] };
     } catch (err) {
       return {
         content: [
