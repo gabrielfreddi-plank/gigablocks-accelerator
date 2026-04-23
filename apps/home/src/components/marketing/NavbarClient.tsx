@@ -4,6 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { signOut } from "@/lib/actions/auth"
+import { GigablocksLogo } from "@/components/marketing/GigablocksLogo"
 
 const navLinks = [
   { label: "Docs", href: "#" },
@@ -11,30 +12,6 @@ const navLinks = [
   { label: "Blog", href: "#" },
   { label: "Changelog", href: "#" },
 ]
-
-function GigablocksLogo() {
-  return (
-    <Link href="/" className="flex items-center gap-2">
-      <svg
-        width="28"
-        height="28"
-        viewBox="0 0 28 28"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        aria-hidden="true"
-      >
-        <rect width="28" height="28" rx="6" fill="#3B82F6" />
-        <rect x="7" y="7" width="6" height="6" rx="1" fill="white" />
-        <rect x="15" y="7" width="6" height="6" rx="1" fill="white" fillOpacity="0.6" />
-        <rect x="7" y="15" width="6" height="6" rx="1" fill="white" fillOpacity="0.6" />
-        <rect x="15" y="15" width="6" height="6" rx="1" fill="white" />
-      </svg>
-      <span className="text-white font-semibold text-lg tracking-tight">
-        Gigablocks
-      </span>
-    </Link>
-  )
-}
 
 interface NavbarClientProps {
   user: { displayName: string } | null
@@ -71,7 +48,7 @@ export function NavbarClient({ user }: NavbarClientProps) {
                 <Link href="/dashboard">
                   <button type="button" className="rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-600 transition-colors">
                     Dashboard
-                  </button>  
+                  </button>
                 </Link>
                 <form action={signOut}>
                   <button
@@ -80,7 +57,6 @@ export function NavbarClient({ user }: NavbarClientProps) {
                   >
                     Sign out
                   </button>
-             
                 </form>
               </>
             ) : (

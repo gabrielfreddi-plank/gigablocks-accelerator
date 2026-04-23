@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { GigablocksLogo } from "@/components/marketing/GigablocksLogo";
 
 const links = [
   { label: "Privacy", href: "#" },
@@ -21,10 +22,11 @@ export function Footer({ className }: { className?: string }) {
       <div className="max-w-6xl mx-auto flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
         {/* Logo + wordmark + tagline */}
         <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <span className="w-6 h-6 rounded bg-blue-600 inline-block shrink-0" aria-hidden="true" />
-            <span className="text-white font-semibold text-lg leading-none">Gigablocks</span>
-          </div>
+          <GigablocksLogo
+            className="w-fit"
+            iconClassName="h-6 w-6"
+            textClassName="text-lg leading-none"
+          />
           <p className="text-zinc-500 text-sm">
             The internal tools platform for modern teams.
           </p>
