@@ -26,19 +26,11 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import postgres from "postgres";
 import { z } from "zod";
 
+import { DATABASE_URL } from "./environment.js";
+
 // ---------------------------------------------------------------------------
 // Connection
 // ---------------------------------------------------------------------------
-
-const DATABASE_URL = process.env.DATABASE_URL;
-
-if (!DATABASE_URL) {
-  console.error("[mcp-database] ❌ DATABASE_URL environment variable is not defined.");
-  console.error(
-    "[mcp-database] Set it in .claude/settings.json → mcpServers.database.env.DATABASE_URL"
-  );
-  process.exit(1);
-}
 
 // max:5 because each MCP invocation is independent — we don't need a large pool
 const sql = postgres(DATABASE_URL, {
@@ -53,7 +45,12 @@ const sql = postgres(DATABASE_URL, {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function paginationNote(label: string, returned: number, total: number, nextQuery: string): string | null {
+function paginationNote(
+  label: string,
+  returned: number,
+  total: number,
+  nextQuery: string,
+): string | null {
   if (returned >= total) return null;
   return `ℹ️  ${label}: showing ${returned}/${total} — ${total - returned} remaining. Use query tool: ${nextQuery}`;
 }
@@ -65,7 +62,8 @@ function paginationNote(label: string, returned: number, total: number, nextQuer
 const server = new McpServer({
   name: "gigablocks-database",
   version: "1.0.0",
-  description: "Read-only access to the gigablocks-accelerator Supabase database",
+  description:
+    "Read-only access to the gigablocks-accelerator Supabase database",
 });
 
 // ---------------------------------------------------------------------------
@@ -80,14 +78,28 @@ server.registerTool(
     inputSchema: {
       sql: z
         .string()
-        .describe("SQL query (SELECT only). E.g: SELECT * FROM public.users LIMIT 10"),
+        .describe(
+          "SQL query (SELECT only). E.g: SELECT * FROM public.users LIMIT 10",
+        ),
     },
   },
   async ({ sql: query }) => {
     // Block any commands that are not SELECT (basic protection)
     const normalized = query.trim().toUpperCase();
-    const forbidden = ["INSERT", "UPDATE", "DELETE", "DROP", "CREATE", "ALTER", "TRUNCATE", "GRANT", "REVOKE"];
-    const startsWithForbidden = forbidden.some((kw) => normalized.startsWith(kw));
+    const forbidden = [
+      "INSERT",
+      "UPDATE",
+      "DELETE",
+      "DROP",
+      "CREATE",
+      "ALTER",
+      "TRUNCATE",
+      "GRANT",
+      "REVOKE",
+    ];
+    const startsWithForbidden = forbidden.some((kw) =>
+      normalized.startsWith(kw),
+    );
 
     if (startsWithForbidden) {
       return {
@@ -109,7 +121,9 @@ server.registerTool(
 
       if (rows.length === 0) {
         return {
-          content: [{ type: "text", text: "✅ Query executed. No rows returned." }],
+          content: [
+            { type: "text", text: "✅ Query executed. No rows returned." },
+          ],
         };
       }
 
@@ -128,11 +142,13 @@ server.registerTool(
       };
     } catch (err) {
       return {
-        content: [{ type: "text", text: `❌ Query error:\n${(err as Error).message}` }],
+        content: [
+          { type: "text", text: `❌ Query error:\n${(err as Error).message}` },
+        ],
         isError: true,
       };
     }
-  }
+  },
 );
 
 // ---------------------------------------------------------------------------
@@ -199,10 +215,14 @@ server.registerTool(
       type ColRow = (typeof columns)[number];
       type FkRow = (typeof foreignKeys)[number];
       type IdxRow = (typeof indexes)[number];
-      const tables: Record<string, { columns: ColRow[]; fks: FkRow[]; indexes: IdxRow[] }> = {};
+      const tables: Record<
+        string,
+        { columns: ColRow[]; fks: FkRow[]; indexes: IdxRow[] }
+      > = {};
 
       for (const col of columns) {
-        if (!tables[col.table_name]) tables[col.table_name] = { columns: [], fks: [], indexes: [] };
+        if (!tables[col.table_name])
+          tables[col.table_name] = { columns: [], fks: [], indexes: [] };
         tables[col.table_name].columns.push(col);
       }
       for (const fk of foreignKeys) {
@@ -212,7 +232,9 @@ server.registerTool(
         if (tables[idx.table_name]) tables[idx.table_name].indexes.push(idx);
       }
 
-      const lines: string[] = [`📐 **Database schema — ${Object.keys(tables).length} table(s)**\n`];
+      const lines: string[] = [
+        `📐 **Database schema — ${Object.keys(tables).length} table(s)**\n`,
+      ];
 
       for (const [tableName, info] of Object.entries(tables)) {
         lines.push(`### ${tableName}`);
@@ -220,14 +242,16 @@ server.registerTool(
         lines.push("|--------|------|----------|---------|");
         for (const col of info.columns) {
           lines.push(
-            `| ${col.column_name} | ${col.udt_name} | ${col.is_nullable} | ${col.column_default ?? "—"} |`
+            `| ${col.column_name} | ${col.udt_name} | ${col.is_nullable} | ${col.column_default ?? "—"} |`,
           );
         }
 
         if (info.fks.length > 0) {
           lines.push("\n**Foreign Keys:**");
           for (const fk of info.fks) {
-            lines.push(`- \`${fk.from_column}\` → \`${fk.to_table}.${fk.to_column}\` (ON DELETE ${fk.delete_rule})`);
+            lines.push(
+              `- \`${fk.from_column}\` → \`${fk.to_table}.${fk.to_column}\` (ON DELETE ${fk.delete_rule})`,
+            );
           }
         }
 
@@ -244,11 +268,16 @@ server.registerTool(
       return { content: [{ type: "text", text: lines.join("\n") }] };
     } catch (err) {
       return {
-        content: [{ type: "text", text: `❌ Error fetching schema:\n${(err as Error).message}` }],
+        content: [
+          {
+            type: "text",
+            text: `❌ Error fetching schema:\n${(err as Error).message}`,
+          },
+        ],
         isError: true,
       };
     }
-  }
+  },
 );
 
 // ---------------------------------------------------------------------------
@@ -263,7 +292,9 @@ server.registerTool(
     inputSchema: {
       table: z
         .string()
-        .describe("Table name (without schema). E.g: users, companies, documents"),
+        .describe(
+          "Table name (without schema). E.g: users, companies, documents",
+        ),
     },
   },
   async ({ table }) => {
@@ -300,7 +331,12 @@ server.registerTool(
 
       if (columns.length === 0) {
         return {
-          content: [{ type: "text", text: `❌ Table "${table}" not found in the public schema.` }],
+          content: [
+            {
+              type: "text",
+              text: `❌ Table "${table}" not found in the public schema.`,
+            },
+          ],
           isError: true,
         };
       }
@@ -313,11 +349,15 @@ server.registerTool(
         "| Column | Type | Nullable | Default |",
         "|--------|------|----------|---------|",
         ...columns.map(
-          (c) => `| ${c.column_name} | ${c.data_type} | ${c.is_nullable} | ${c.column_default ?? "—"} |`
+          (c) =>
+            `| ${c.column_name} | ${c.data_type} | ${c.is_nullable} | ${c.column_default ?? "—"} |`,
         ),
         "",
         "### Constraints",
-        ...constraints.map((c) => `- \`${c.constraint_name}\` (${c.constraint_type}) → \`${c.column_name}\``),
+        ...constraints.map(
+          (c) =>
+            `- \`${c.constraint_name}\` (${c.constraint_type}) → \`${c.column_name}\``,
+        ),
         "",
         "### Sample data (up to 5 rows)",
         "```json",
@@ -328,11 +368,16 @@ server.registerTool(
       return { content: [{ type: "text", text: lines.join("\n") }] };
     } catch (err) {
       return {
-        content: [{ type: "text", text: `❌ Error describing table:\n${(err as Error).message}` }],
+        content: [
+          {
+            type: "text",
+            text: `❌ Error describing table:\n${(err as Error).message}`,
+          },
+        ],
         isError: true,
       };
     }
-  }
+  },
 );
 
 // ---------------------------------------------------------------------------
@@ -352,51 +397,60 @@ server.registerTool(
         .enum(["concise", "detailed"])
         .default("concise")
         .describe(
-          "concise: counts + id/name only (default, saves tokens). detailed: includes timestamps and owner names."
+          "concise: counts + id/name only (default, saves tokens). detailed: includes timestamps and owner names.",
         ),
     },
   },
   async ({ detail }) => {
     try {
-      const [userCount, companyCount, docCount, users, companies] = await Promise.all([
-        sql`SELECT COUNT(*)::int AS n FROM public.usuarios`,
-        sql`SELECT COUNT(*)::int AS n FROM public.empresas`,
-        sql`SELECT COUNT(*)::int AS n FROM public.documentos`,
+      const [userCount, companyCount, docCount, users, companies] =
+        await Promise.all([
+          sql`SELECT COUNT(*)::int AS n FROM public.usuarios`,
+          sql`SELECT COUNT(*)::int AS n FROM public.empresas`,
+          sql`SELECT COUNT(*)::int AS n FROM public.documentos`,
 
-        detail === "concise"
-          ? sql`SELECT id, nome FROM public.usuarios ORDER BY created_at DESC LIMIT 50`
-          : sql`SELECT id, nome, created_at FROM public.usuarios ORDER BY created_at DESC LIMIT 50`,
+          detail === "concise"
+            ? sql`SELECT id, nome FROM public.usuarios ORDER BY created_at DESC LIMIT 50`
+            : sql`SELECT id, nome, created_at FROM public.usuarios ORDER BY created_at DESC LIMIT 50`,
 
-        detail === "concise"
-          ? sql`
+          detail === "concise"
+            ? sql`
               SELECT e.id, e.nome, u.nome AS owner
               FROM public.empresas e
               JOIN public.usuarios u ON u.id = e.usuario_id
               ORDER BY e.created_at DESC LIMIT 50
             `
-          : sql`
+            : sql`
               SELECT e.id, e.nome, u.nome AS owner, e.created_at
               FROM public.empresas e
               JOIN public.usuarios u ON u.id = e.usuario_id
               ORDER BY e.created_at DESC LIMIT 50
             `,
-      ]);
+        ]);
 
       const totalUsers = userCount[0].n;
       const totalCompanies = companyCount[0].n;
       const totalDocs = docCount[0].n;
 
       const result = {
-        counts: { users: totalUsers, companies: totalCompanies, documents: totalDocs },
+        counts: {
+          users: totalUsers,
+          companies: totalCompanies,
+          documents: totalDocs,
+        },
         users_sample: users,
         companies_sample: companies,
       };
 
       const truncationNotes: string[] = [];
       if (users.length < totalUsers)
-        truncationNotes.push(`users_sample shows ${users.length}/${totalUsers} — use query tool with WHERE to find others`);
+        truncationNotes.push(
+          `users_sample shows ${users.length}/${totalUsers} — use query tool with WHERE to find others`,
+        );
       if (companies.length < totalCompanies)
-        truncationNotes.push(`companies_sample shows ${companies.length}/${totalCompanies} — use query tool with WHERE to find others`);
+        truncationNotes.push(
+          `companies_sample shows ${companies.length}/${totalCompanies} — use query tool with WHERE to find others`,
+        );
 
       const lines = [
         `✅ Platform: ${totalUsers} user(s), ${totalCompanies} company(ies), ${totalDocs} document(s).`,
@@ -421,7 +475,7 @@ server.registerTool(
         isError: true,
       };
     }
-  }
+  },
 );
 
 // ---------------------------------------------------------------------------
@@ -440,34 +494,39 @@ server.registerTool(
       empresa_id: z
         .string()
         .uuid()
-        .describe("Company UUID. Get from platform-overview → companies_sample[n].id."),
+        .describe(
+          "Company UUID. Get from platform-overview → companies_sample[n].id.",
+        ),
       detail: z
         .enum(["concise", "detailed"])
         .default("concise")
-        .describe("concise: names + roles only (default). detailed: adds timestamps and owner info."),
+        .describe(
+          "concise: names + roles only (default). detailed: adds timestamps and owner info.",
+        ),
     },
   },
   async ({ empresa_id, detail }) => {
     try {
-      const [company, memberCount, members, docCount, documents] = await Promise.all([
-        detail === "concise"
-          ? sql`
+      const [company, memberCount, members, docCount, documents] =
+        await Promise.all([
+          detail === "concise"
+            ? sql`
               SELECT e.nome, u.nome AS owner
               FROM public.empresas e
               JOIN public.usuarios u ON u.id = e.usuario_id
               WHERE e.id = ${empresa_id}
             `
-          : sql`
+            : sql`
               SELECT e.id, e.nome, u.nome AS owner, e.created_at
               FROM public.empresas e
               JOIN public.usuarios u ON u.id = e.usuario_id
               WHERE e.id = ${empresa_id}
             `,
 
-        sql`SELECT COUNT(*)::int AS n FROM public.empresa_membros WHERE empresa_id = ${empresa_id}`,
+          sql`SELECT COUNT(*)::int AS n FROM public.empresa_membros WHERE empresa_id = ${empresa_id}`,
 
-        detail === "concise"
-          ? sql`
+          detail === "concise"
+            ? sql`
               SELECT u.nome AS member, em.role
               FROM public.empresa_membros em
               JOIN public.usuarios u ON u.id = em.usuario_id
@@ -475,7 +534,7 @@ server.registerTool(
               ORDER BY em.created_at
               LIMIT 50
             `
-          : sql`
+            : sql`
               SELECT u.id AS usuario_id, u.nome AS member, em.role, em.created_at AS joined_at
               FROM public.empresa_membros em
               JOIN public.usuarios u ON u.id = em.usuario_id
@@ -484,12 +543,12 @@ server.registerTool(
               LIMIT 50
             `,
 
-        sql`SELECT COUNT(*)::int AS n FROM public.documentos WHERE empresa_id = ${empresa_id}`,
+          sql`SELECT COUNT(*)::int AS n FROM public.documentos WHERE empresa_id = ${empresa_id}`,
 
-        detail === "concise"
-          ? sql`SELECT nome FROM public.documentos WHERE empresa_id = ${empresa_id} ORDER BY created_at DESC LIMIT 50`
-          : sql`SELECT id, nome, created_at FROM public.documentos WHERE empresa_id = ${empresa_id} ORDER BY created_at DESC LIMIT 50`,
-      ]);
+          detail === "concise"
+            ? sql`SELECT nome FROM public.documentos WHERE empresa_id = ${empresa_id} ORDER BY created_at DESC LIMIT 50`
+            : sql`SELECT id, nome, created_at FROM public.documentos WHERE empresa_id = ${empresa_id} ORDER BY created_at DESC LIMIT 50`,
+        ]);
 
       if (company.length === 0) {
         return {
@@ -513,13 +572,13 @@ server.registerTool(
         "members",
         members.length,
         totalMembers,
-        `SELECT u.nome, em.role FROM empresa_membros em JOIN usuarios u ON u.id = em.usuario_id WHERE em.empresa_id = '${empresa_id}' ORDER BY em.created_at OFFSET 50 LIMIT 50`
+        `SELECT u.nome, em.role FROM empresa_membros em JOIN usuarios u ON u.id = em.usuario_id WHERE em.empresa_id = '${empresa_id}' ORDER BY em.created_at OFFSET 50 LIMIT 50`,
       );
       const docNote = paginationNote(
         "documents",
         documents.length,
         totalDocs,
-        `SELECT id, nome FROM documentos WHERE empresa_id = '${empresa_id}' ORDER BY created_at DESC OFFSET 50 LIMIT 50`
+        `SELECT id, nome FROM documentos WHERE empresa_id = '${empresa_id}' ORDER BY created_at DESC OFFSET 50 LIMIT 50`,
       );
 
       const result = { company: company[0], members, documents };
@@ -546,7 +605,7 @@ server.registerTool(
         isError: true,
       };
     }
-  }
+  },
 );
 
 // ---------------------------------------------------------------------------
@@ -565,11 +624,15 @@ server.registerTool(
       usuario_id: z
         .string()
         .uuid()
-        .describe("User UUID. Get from platform-overview → users_sample[n].id."),
+        .describe(
+          "User UUID. Get from platform-overview → users_sample[n].id.",
+        ),
       detail: z
         .enum(["concise", "detailed"])
         .default("concise")
-        .describe("concise: company name + role only (default). detailed: adds company ID and timestamps."),
+        .describe(
+          "concise: company name + role only (default). detailed: adds company ID and timestamps.",
+        ),
     },
   },
   async ({ usuario_id, detail }) => {
@@ -627,7 +690,7 @@ server.registerTool(
         "companies",
         rows.length,
         total,
-        `SELECT e.nome, em.role FROM empresas e LEFT JOIN empresa_membros em ON em.empresa_id = e.id AND em.usuario_id = '${usuario_id}' WHERE e.usuario_id = '${usuario_id}' OR em.usuario_id = '${usuario_id}' ORDER BY e.created_at DESC OFFSET 50 LIMIT 50`
+        `SELECT e.nome, em.role FROM empresas e LEFT JOIN empresa_membros em ON em.empresa_id = e.id AND em.usuario_id = '${usuario_id}' WHERE e.usuario_id = '${usuario_id}' OR em.usuario_id = '${usuario_id}' ORDER BY e.created_at DESC OFFSET 50 LIMIT 50`,
       );
 
       const lines = [
@@ -653,7 +716,7 @@ server.registerTool(
         isError: true,
       };
     }
-  }
+  },
 );
 
 // ---------------------------------------------------------------------------
@@ -697,7 +760,7 @@ server.registerResource(
         ],
       };
     }
-  }
+  },
 );
 
 // ---------------------------------------------------------------------------
