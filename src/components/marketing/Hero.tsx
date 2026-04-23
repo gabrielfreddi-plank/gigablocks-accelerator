@@ -1,4 +1,7 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
+import { posthog } from "@/lib/posthog/client";
 
 export function Hero() {
   return (
@@ -34,11 +37,13 @@ export function Hero() {
         <div className="flex flex-col sm:flex-row items-center gap-3 mt-2">
           <Button
             className="bg-blue-500 hover:bg-blue-600 text-white border-transparent px-6 py-2.5 text-base h-auto rounded-lg"
+            onClick={() => posthog.capture("hero_cta_clicked")}
           >
             Start building free
           </Button>
           <Button
             className="bg-zinc-800 hover:bg-zinc-700 text-white border-transparent px-6 py-2.5 text-base h-auto rounded-lg"
+            onClick={() => posthog.capture("hero_demo_clicked")}
           >
             View live demo →
           </Button>

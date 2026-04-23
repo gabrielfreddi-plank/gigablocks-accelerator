@@ -1,4 +1,7 @@
-import { Button } from "@/components/ui/button"
+"use client";
+
+import { Button } from "@/components/ui/button";
+import { posthog } from "@/lib/posthog/client";
 
 export function CTAFinal() {
   return (
@@ -15,7 +18,11 @@ export function CTAFinal() {
       <div className="relative z-10 flex flex-col items-center gap-6 px-4 text-center">
         <h2
           className="font-extrabold text-white"
-          style={{ fontSize: "40px", lineHeight: 1.15, fontFamily: "var(--font-inter)" }}
+          style={{
+            fontSize: "40px",
+            lineHeight: 1.15,
+            fontFamily: "var(--font-inter)",
+          }}
         >
           Ready to ship your first internal tool?
         </h2>
@@ -27,6 +34,7 @@ export function CTAFinal() {
         <Button
           className="bg-blue-500 hover:bg-blue-400 text-white px-8 font-semibold"
           style={{ height: "52px", borderRadius: "10px" }}
+          onClick={() => posthog.capture("final_cta_clicked")}
         >
           Start building for free
         </Button>
@@ -34,10 +42,11 @@ export function CTAFinal() {
         <a
           href="#"
           className="text-zinc-500 text-sm hover:text-zinc-300 transition-colors"
+          onClick={() => posthog.capture("schedule_demo_clicked")}
         >
           or schedule a demo →
         </a>
       </div>
     </section>
-  )
+  );
 }

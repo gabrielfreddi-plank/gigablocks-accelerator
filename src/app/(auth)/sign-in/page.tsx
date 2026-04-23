@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useEffect, type FormEvent } from "react";
 import { signIn } from "@/lib/actions/auth";
 import { AuthInput } from "@/components/ui/auth-input";
 import {
@@ -12,9 +12,21 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { posthog } from "@/lib/posthog/client";
 
 export default function SignInPage() {
   const [state, action, pending] = useActionState(signIn, null);
+
+  useEffect(() => {
+    if (state?.error) {
+      posthog.capture("sign_in_failed", { error: state.error });
+    }
+  }, [state?.error]);
+
+  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    const email = new FormData(e.currentTarget).get("email") as string;
+    posthog.capture("sign_in_submitted", { email });
+  }
 
   return (
     <Card className="w-full max-w-sm border-zinc-800 bg-zinc-950 text-white shadow-xl">
@@ -30,19 +42,42 @@ export default function SignInPage() {
           >
             <rect width="28" height="28" rx="6" fill="#3B82F6" />
             <rect x="7" y="7" width="6" height="6" rx="1" fill="white" />
-            <rect x="15" y="7" width="6" height="6" rx="1" fill="white" fillOpacity="0.6" />
-            <rect x="7" y="15" width="6" height="6" rx="1" fill="white" fillOpacity="0.6" />
+            <rect
+              x="15"
+              y="7"
+              width="6"
+              height="6"
+              rx="1"
+              fill="white"
+              fillOpacity="0.6"
+            />
+            <rect
+              x="7"
+              y="15"
+              width="6"
+              height="6"
+              rx="1"
+              fill="white"
+              fillOpacity="0.6"
+            />
             <rect x="15" y="15" width="6" height="6" rx="1" fill="white" />
           </svg>
         </div>
-        <CardTitle className="text-center text-xl font-semibold">Sign in</CardTitle>
+        <CardTitle className="text-center text-xl font-semibold">
+          Sign in
+        </CardTitle>
         <CardDescription className="text-center text-zinc-400">
           Access your Gigablocks account
         </CardDescription>
       </CardHeader>
 
       <CardContent>
-        <form id="sign-in-form" action={action} className="flex flex-col gap-4">
+        <form
+          id="sign-in-form"
+          action={action}
+          onSubmit={handleSubmit}
+          className="flex flex-col gap-4"
+        >
           <AuthInput
             label="Email"
             name="email"
@@ -79,7 +114,10 @@ export default function SignInPage() {
       <CardFooter className="justify-center pb-6">
         <p className="text-sm text-zinc-500">
           Don&apos;t have an account?{" "}
-          <Link href="/sign-up" className="text-blue-400 hover:text-blue-300 transition-colors">
+          <Link
+            href="/sign-up"
+            className="text-blue-400 hover:text-blue-300 transition-colors"
+          >
             Create account
           </Link>
         </p>
