@@ -26,12 +26,17 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const isAuthRoute = pathname.startsWith("/sign-in") || pathname.startsWith("/sign-up");
   const isProtected = pathname.startsWith("/dashboard") || pathname.startsWith("/onboarding");
+  const isRootRoute = pathname === "/";
 
   if (!user && isProtected) {
     return NextResponse.redirect(new URL("/sign-in", request.url));
   }
 
   if (user && isAuthRoute) {
+    return NextResponse.redirect(new URL("/dashboard", request.url));
+  }
+
+  if (user && isRootRoute) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
