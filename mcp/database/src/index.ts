@@ -343,19 +343,10 @@ server.registerTool(
 server.registerTool(
   "platform-overview",
   {
-    description: [
-      "Returns a snapshot of the entire platform: exact counts (users, companies, documents)",
-      "and a sampled list of users and companies for ID discovery.",
-      "",
-      "Use this FIRST when you need to orient yourself or find an ID before calling",
-      "get-company-overview or get-user-companies.",
-      "",
-      "detail='concise' (default): returns counts + id/name pairs only (~⅓ the tokens).",
-      "detail='detailed': includes created_at and owner on each entity.",
-      "",
-      "Entity lists are capped at 50 most recent. If you need a specific entity",
-      "not in the sample, use the query tool with a WHERE clause.",
-    ].join("\n"),
+    description:
+      "Returns a snapshot of the entire platform: exact counts (users, companies, documents) and a sampled list of users and companies for ID discovery. " +
+      "Use this FIRST when you need to orient yourself or find an ID before calling get-company-overview or get-user-companies. " +
+      "Entity lists are capped at 50 most recent — use the query tool with a WHERE clause to find others.",
     inputSchema: {
       detail: z
         .enum(["concise", "detailed"])
@@ -442,19 +433,9 @@ server.registerTool(
 server.registerTool(
   "get-company-overview",
   {
-    description: [
-      "Returns the full picture of one company in a single call:",
-      "company metadata, team members with resolved names and roles, and document list.",
-      "",
+    description:
+      "Returns the full picture of one company in a single call: company metadata, team members with resolved names and roles, and document list. " +
       "Use this after getting a company ID from platform-overview.",
-      "",
-      "detail='concise' (default): company name + member names/roles + document names only.",
-      "detail='detailed': adds created_at, owner info, and joined_at timestamps.",
-      "",
-      "empresa_id: UUID of the company.",
-      "Get it from platform-overview → companies_sample[n].id.",
-      "Common mistake: passing the company name instead of its UUID.",
-    ].join("\n"),
     inputSchema: {
       empresa_id: z
         .string()
@@ -577,18 +558,9 @@ server.registerTool(
 server.registerTool(
   "get-user-companies",
   {
-    description: [
-      "Returns every company a user owns or belongs to, with their role in each — in a single call.",
-      "",
+    description:
+      "Returns every company a user owns or belongs to, with their role in each — in a single call. " +
       "Use this after getting a user ID from platform-overview.",
-      "",
-      "detail='concise' (default): company name + role only (~⅓ the tokens).",
-      "detail='detailed': adds company ID and joined_at timestamp for downstream tool calls.",
-      "",
-      "usuario_id: UUID of the user.",
-      "Get it from platform-overview → users_sample[n].id.",
-      "Common mistake: passing the user's name instead of their UUID.",
-    ].join("\n"),
     inputSchema: {
       usuario_id: z
         .string()
