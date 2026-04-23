@@ -7,9 +7,18 @@
  * Required environment variables:
  *   DATABASE_URL  — postgres://postgres.[ref]:[password]@aws-0-[region].pooler.supabase.com:6543/postgres
  *
- * Primitives:
- *   Tools:    query, schema, describe-table, list-users, list-companies, get-company-overview, get-user-companies
- *   Resource: tables
+ * Tools are grouped around INTENT, not endpoints.
+ * Reference: https://www.anthropic.com/engineering/writing-tools-for-agents
+ *
+ * Intent tools (accomplish a full goal in one call):
+ *   platform-overview    — orientation: counts + entity samples for ID discovery
+ *   get-company-overview — full company picture: info + team + documents
+ *   get-user-companies   — full user picture: every company they own or belong to
+ *
+ * Utility tools (for exploration and custom queries):
+ *   query, schema, describe-table
+ *
+ * Resource: tables
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -318,103 +327,187 @@ server.registerTool(
 );
 
 // ---------------------------------------------------------------------------
-// TOOL: list-users
+// TOOL: platform-overview
+// INTENT: "What is the state of the platform? Give me IDs to explore further."
+// Replaces list-users + list-companies (2 chained endpoint calls → 1 intent call).
 // ---------------------------------------------------------------------------
 server.registerTool(
-  "list-users",
+  "platform-overview",
   {
-    description: "Returns all registered users with their id, name, and registration date.",
-    inputSchema: {},
+    description: [
+      "Returns a snapshot of the entire platform: exact counts (users, companies, documents)",
+      "and a sampled list of users and companies for ID discovery.",
+      "",
+      "Use this FIRST when you need to orient yourself or find an ID before calling",
+      "get-company-overview or get-user-companies.",
+      "",
+      "detail='concise' (default): returns counts + id/name pairs only (~⅓ the tokens).",
+      "detail='detailed': includes created_at and owner on each entity.",
+      "",
+      "Entity lists are capped at 50 most recent. If you need a specific entity",
+      "not in the sample, use the query tool with a WHERE clause.",
+    ].join("\n"),
+    inputSchema: {
+      detail: z
+        .enum(["concise", "detailed"])
+        .default("concise")
+        .describe(
+          "concise: counts + id/name only (default, saves tokens). detailed: includes timestamps and owner names."
+        ),
+    },
   },
-  async () => {
+  async ({ detail }) => {
     try {
-      const rows = await sql`
-        SELECT id, nome, created_at
-        FROM public.usuarios
-        ORDER BY created_at DESC
-      `;
-      return {
-        content: [
-          {
-            type: "text",
-            text: [`✅ ${rows.length} user(s) found:`, "```json", JSON.stringify(rows, null, 2), "```"].join("\n"),
-          },
-        ],
-      };
-    } catch (err) {
-      return { content: [{ type: "text", text: `❌ Error: ${(err as Error).message}` }], isError: true };
-    }
-  }
-);
+      const [userCount, companyCount, docCount, users, companies] = await Promise.all([
+        sql`SELECT COUNT(*)::int AS n FROM public.usuarios`,
+        sql`SELECT COUNT(*)::int AS n FROM public.empresas`,
+        sql`SELECT COUNT(*)::int AS n FROM public.documentos`,
 
-// ---------------------------------------------------------------------------
-// TOOL: list-companies
-// ---------------------------------------------------------------------------
-server.registerTool(
-  "list-companies",
-  {
-    description: "Returns all registered companies, including who created them and when.",
-    inputSchema: {},
-  },
-  async () => {
-    try {
-      const rows = await sql`
-        SELECT e.id, e.nome, u.nome AS owner, e.created_at
-        FROM public.empresas e
-        JOIN public.usuarios u ON u.id = e.usuario_id
-        ORDER BY e.created_at DESC
-      `;
+        detail === "concise"
+          ? sql`SELECT id, nome FROM public.usuarios ORDER BY created_at DESC LIMIT 50`
+          : sql`SELECT id, nome, created_at FROM public.usuarios ORDER BY created_at DESC LIMIT 50`,
+
+        detail === "concise"
+          ? sql`
+              SELECT e.id, e.nome, u.nome AS owner
+              FROM public.empresas e
+              JOIN public.usuarios u ON u.id = e.usuario_id
+              ORDER BY e.created_at DESC LIMIT 50
+            `
+          : sql`
+              SELECT e.id, e.nome, u.nome AS owner, e.created_at
+              FROM public.empresas e
+              JOIN public.usuarios u ON u.id = e.usuario_id
+              ORDER BY e.created_at DESC LIMIT 50
+            `,
+      ]);
+
+      const totalUsers = userCount[0].n;
+      const totalCompanies = companyCount[0].n;
+      const totalDocs = docCount[0].n;
+
+      const result = {
+        counts: { users: totalUsers, companies: totalCompanies, documents: totalDocs },
+        users_sample: users,
+        companies_sample: companies,
+      };
+
+      const truncationNotes: string[] = [];
+      if (users.length < totalUsers)
+        truncationNotes.push(`users_sample shows ${users.length}/${totalUsers} — use query tool with WHERE to find others`);
+      if (companies.length < totalCompanies)
+        truncationNotes.push(`companies_sample shows ${companies.length}/${totalCompanies} — use query tool with WHERE to find others`);
+
+      const lines = [
+        `✅ Platform: ${totalUsers} user(s), ${totalCompanies} company(ies), ${totalDocs} document(s).`,
+        ...truncationNotes.map((n) => `ℹ️  ${n}`),
+        "```json",
+        JSON.stringify(result, null, 2),
+        "```",
+      ];
+
+      return { content: [{ type: "text", text: lines.join("\n") }] };
+    } catch (err) {
       return {
         content: [
           {
             type: "text",
-            text: [`✅ ${rows.length} company(ies) found:`, "```json", JSON.stringify(rows, null, 2), "```"].join("\n"),
+            text: [
+              `❌ Error fetching platform overview: ${(err as Error).message}`,
+              "Next steps: verify DATABASE_URL is set and the database is reachable.",
+            ].join("\n"),
           },
         ],
+        isError: true,
       };
-    } catch (err) {
-      return { content: [{ type: "text", text: `❌ Error: ${(err as Error).message}` }], isError: true };
     }
   }
 );
 
 // ---------------------------------------------------------------------------
 // TOOL: get-company-overview
+// INTENT: "What is the full picture of this company?"
+// One call returns: company info + team (with names) + document inventory.
+// Replaces: list-companies (get ID) → manual member query → manual docs query.
 // ---------------------------------------------------------------------------
 server.registerTool(
   "get-company-overview",
   {
-    description: "Returns full overview of a company: info, members with roles, and documents.",
+    description: [
+      "Returns the full picture of one company in a single call:",
+      "company metadata, team members with resolved names and roles, and document list.",
+      "",
+      "Use this after getting a company ID from platform-overview.",
+      "",
+      "detail='concise' (default): company name + member names/roles + document names only.",
+      "detail='detailed': adds created_at, owner info, and joined_at timestamps.",
+      "",
+      "empresa_id: UUID of the company.",
+      "Get it from platform-overview → companies_sample[n].id.",
+      "Common mistake: passing the company name instead of its UUID.",
+    ].join("\n"),
     inputSchema: {
-      empresa_id: z.string().uuid().describe("Company UUID"),
+      empresa_id: z
+        .string()
+        .uuid()
+        .describe("Company UUID. Get from platform-overview → companies_sample[n].id."),
+      detail: z
+        .enum(["concise", "detailed"])
+        .default("concise")
+        .describe("concise: names + roles only (default). detailed: adds timestamps and owner info."),
     },
   },
-  async ({ empresa_id }) => {
+  async ({ empresa_id, detail }) => {
     try {
       const [company, members, documents] = await Promise.all([
-        sql`
-          SELECT e.id, e.nome, u.nome AS owner, e.created_at
-          FROM public.empresas e
-          JOIN public.usuarios u ON u.id = e.usuario_id
-          WHERE e.id = ${empresa_id}
-        `,
-        sql`
-          SELECT u.nome AS usuario, em.role, em.created_at AS joined_at
-          FROM public.empresa_membros em
-          JOIN public.usuarios u ON u.id = em.usuario_id
-          WHERE em.empresa_id = ${empresa_id}
-          ORDER BY em.created_at
-        `,
-        sql`
-          SELECT id, nome, created_at
-          FROM public.documentos
-          WHERE empresa_id = ${empresa_id}
-          ORDER BY created_at DESC
-        `,
+        detail === "concise"
+          ? sql`
+              SELECT e.nome, u.nome AS owner
+              FROM public.empresas e
+              JOIN public.usuarios u ON u.id = e.usuario_id
+              WHERE e.id = ${empresa_id}
+            `
+          : sql`
+              SELECT e.id, e.nome, u.nome AS owner, e.created_at
+              FROM public.empresas e
+              JOIN public.usuarios u ON u.id = e.usuario_id
+              WHERE e.id = ${empresa_id}
+            `,
+
+        detail === "concise"
+          ? sql`
+              SELECT u.nome AS member, em.role
+              FROM public.empresa_membros em
+              JOIN public.usuarios u ON u.id = em.usuario_id
+              WHERE em.empresa_id = ${empresa_id}
+              ORDER BY em.created_at
+            `
+          : sql`
+              SELECT u.id AS usuario_id, u.nome AS member, em.role, em.created_at AS joined_at
+              FROM public.empresa_membros em
+              JOIN public.usuarios u ON u.id = em.usuario_id
+              WHERE em.empresa_id = ${empresa_id}
+              ORDER BY em.created_at
+            `,
+
+        detail === "concise"
+          ? sql`SELECT nome FROM public.documentos WHERE empresa_id = ${empresa_id} ORDER BY created_at DESC`
+          : sql`SELECT id, nome, created_at FROM public.documentos WHERE empresa_id = ${empresa_id} ORDER BY created_at DESC`,
       ]);
 
       if (company.length === 0) {
-        return { content: [{ type: "text", text: `❌ Company not found: ${empresa_id}` }], isError: true };
+        return {
+          content: [
+            {
+              type: "text",
+              text: [
+                `❌ Company not found: ${empresa_id}`,
+                "Next steps: call platform-overview to get valid company IDs.",
+              ].join("\n"),
+            },
+          ],
+          isError: true,
+        };
       }
 
       const result = { company: company[0], members, documents };
@@ -422,50 +515,129 @@ server.registerTool(
         content: [
           {
             type: "text",
-            text: ["✅ Company overview:", "```json", JSON.stringify(result, null, 2), "```"].join("\n"),
+            text: [
+              `✅ Company "${company[0].nome}": ${members.length} member(s), ${documents.length} document(s).`,
+              "```json",
+              JSON.stringify(result, null, 2),
+              "```",
+            ].join("\n"),
           },
         ],
       };
     } catch (err) {
-      return { content: [{ type: "text", text: `❌ Error: ${(err as Error).message}` }], isError: true };
+      return {
+        content: [
+          {
+            type: "text",
+            text: [
+              `❌ Error fetching company overview: ${(err as Error).message}`,
+              `Next steps: verify empresa_id "${empresa_id}" is a valid UUID from platform-overview.`,
+            ].join("\n"),
+          },
+        ],
+        isError: true,
+      };
     }
   }
 );
 
 // ---------------------------------------------------------------------------
 // TOOL: get-user-companies
+// INTENT: "What companies is this user part of and in what capacity?"
+// One call returns: every company the user owns or is a member of, with role.
+// Replaces: list-users (get ID) → list-companies (filter) → separate member query.
 // ---------------------------------------------------------------------------
 server.registerTool(
   "get-user-companies",
   {
-    description: "Returns all companies a user owns or is a member of, with their role in each.",
+    description: [
+      "Returns every company a user owns or belongs to, with their role in each — in a single call.",
+      "",
+      "Use this after getting a user ID from platform-overview.",
+      "",
+      "detail='concise' (default): company name + role only (~⅓ the tokens).",
+      "detail='detailed': adds company ID and joined_at timestamp for downstream tool calls.",
+      "",
+      "usuario_id: UUID of the user.",
+      "Get it from platform-overview → users_sample[n].id.",
+      "Common mistake: passing the user's name instead of their UUID.",
+    ].join("\n"),
     inputSchema: {
-      usuario_id: z.string().uuid().describe("User UUID"),
+      usuario_id: z
+        .string()
+        .uuid()
+        .describe("User UUID. Get from platform-overview → users_sample[n].id."),
+      detail: z
+        .enum(["concise", "detailed"])
+        .default("concise")
+        .describe("concise: company name + role only (default). detailed: adds company ID and timestamps."),
     },
   },
-  async ({ usuario_id }) => {
+  async ({ usuario_id, detail }) => {
     try {
-      const rows = await sql`
-        SELECT
-          e.id AS empresa_id,
-          e.nome AS empresa,
-          CASE WHEN e.usuario_id = ${usuario_id} THEN 'owner' ELSE em.role END AS role,
-          e.created_at
-        FROM public.empresas e
-        LEFT JOIN public.empresa_membros em ON em.empresa_id = e.id AND em.usuario_id = ${usuario_id}
-        WHERE e.usuario_id = ${usuario_id} OR em.usuario_id = ${usuario_id}
-        ORDER BY e.created_at DESC
-      `;
+      const rows =
+        detail === "concise"
+          ? await sql`
+              SELECT
+                e.nome AS company,
+                CASE WHEN e.usuario_id = ${usuario_id} THEN 'owner' ELSE em.role END AS role
+              FROM public.empresas e
+              LEFT JOIN public.empresa_membros em ON em.empresa_id = e.id AND em.usuario_id = ${usuario_id}
+              WHERE e.usuario_id = ${usuario_id} OR em.usuario_id = ${usuario_id}
+              ORDER BY e.created_at DESC
+            `
+          : await sql`
+              SELECT
+                e.id AS company_id,
+                e.nome AS company,
+                CASE WHEN e.usuario_id = ${usuario_id} THEN 'owner' ELSE em.role END AS role,
+                e.created_at
+              FROM public.empresas e
+              LEFT JOIN public.empresa_membros em ON em.empresa_id = e.id AND em.usuario_id = ${usuario_id}
+              WHERE e.usuario_id = ${usuario_id} OR em.usuario_id = ${usuario_id}
+              ORDER BY e.created_at DESC
+            `;
+
+      if (rows.length === 0) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: [
+                `✅ User ${usuario_id} belongs to no companies.`,
+                "They may exist but not yet own or be invited to any company.",
+              ].join("\n"),
+            },
+          ],
+        };
+      }
+
       return {
         content: [
           {
             type: "text",
-            text: [`✅ ${rows.length} company(ies) for this user:`, "```json", JSON.stringify(rows, null, 2), "```"].join("\n"),
+            text: [
+              `✅ ${rows.length} company(ies) for this user.`,
+              "```json",
+              JSON.stringify(rows, null, 2),
+              "```",
+            ].join("\n"),
           },
         ],
       };
     } catch (err) {
-      return { content: [{ type: "text", text: `❌ Error: ${(err as Error).message}` }], isError: true };
+      return {
+        content: [
+          {
+            type: "text",
+            text: [
+              `❌ Error fetching user companies: ${(err as Error).message}`,
+              `Next steps: verify usuario_id "${usuario_id}" is a valid UUID from platform-overview.`,
+            ].join("\n"),
+          },
+        ],
+        isError: true,
+      };
     }
   }
 );
