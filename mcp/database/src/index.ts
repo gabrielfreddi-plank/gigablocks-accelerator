@@ -7,9 +7,18 @@
  * Required environment variables:
  *   DATABASE_URL  — postgres://postgres.[ref]:[password]@aws-0-[region].pooler.supabase.com:6543/postgres
  *
- * Primitives:
- *   Tools:    query, schema, describe-table, list-users, list-companies, get-company-overview, get-user-companies
- *   Resource: tables
+ * Tools are grouped around INTENT, not endpoints.
+ * Reference: https://www.anthropic.com/engineering/writing-tools-for-agents
+ *
+ * Intent tools (accomplish a full goal in one call):
+ *   platform-overview    — orientation: counts + entity samples for ID discovery
+ *   get-company-overview — full company picture: info + team + documents
+ *   get-user-companies   — full user picture: every company they own or belong to
+ *
+ * Utility tools (for exploration and custom queries):
+ *   query, schema, describe-table
+ *
+ * Resource: tables
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -17,19 +26,11 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import postgres from "postgres";
 import { z } from "zod";
 
+import { DATABASE_URL } from "./environment.js";
+
 // ---------------------------------------------------------------------------
 // Connection
 // ---------------------------------------------------------------------------
-
-const DATABASE_URL = process.env.DATABASE_URL;
-
-if (!DATABASE_URL) {
-  console.error("[mcp-database] ❌ DATABASE_URL environment variable is not defined.");
-  console.error(
-    "[mcp-database] Set it in .claude/settings.json → mcpServers.database.env.DATABASE_URL"
-  );
-  process.exit(1);
-}
 
 // max:5 because each MCP invocation is independent — we don't need a large pool
 const sql = postgres(DATABASE_URL, {
@@ -41,13 +42,28 @@ const sql = postgres(DATABASE_URL, {
 });
 
 // ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function paginationNote(
+  label: string,
+  returned: number,
+  total: number,
+  nextQuery: string,
+): string | null {
+  if (returned >= total) return null;
+  return `ℹ️  ${label}: showing ${returned}/${total} — ${total - returned} remaining. Use query tool: ${nextQuery}`;
+}
+
+// ---------------------------------------------------------------------------
 // MCP Server
 // ---------------------------------------------------------------------------
 
 const server = new McpServer({
   name: "gigablocks-database",
   version: "1.0.0",
-  description: "Read-only access to the gigablocks-accelerator Supabase database",
+  description:
+    "Read-only access to the gigablocks-accelerator Supabase database",
 });
 
 // ---------------------------------------------------------------------------
@@ -62,14 +78,28 @@ server.registerTool(
     inputSchema: {
       sql: z
         .string()
-        .describe("SQL query (SELECT only). E.g: SELECT * FROM public.users LIMIT 10"),
+        .describe(
+          "SQL query (SELECT only). E.g: SELECT * FROM public.users LIMIT 10",
+        ),
     },
   },
   async ({ sql: query }) => {
     // Block any commands that are not SELECT (basic protection)
     const normalized = query.trim().toUpperCase();
-    const forbidden = ["INSERT", "UPDATE", "DELETE", "DROP", "CREATE", "ALTER", "TRUNCATE", "GRANT", "REVOKE"];
-    const startsWithForbidden = forbidden.some((kw) => normalized.startsWith(kw));
+    const forbidden = [
+      "INSERT",
+      "UPDATE",
+      "DELETE",
+      "DROP",
+      "CREATE",
+      "ALTER",
+      "TRUNCATE",
+      "GRANT",
+      "REVOKE",
+    ];
+    const startsWithForbidden = forbidden.some((kw) =>
+      normalized.startsWith(kw),
+    );
 
     if (startsWithForbidden) {
       return {
@@ -91,7 +121,9 @@ server.registerTool(
 
       if (rows.length === 0) {
         return {
-          content: [{ type: "text", text: "✅ Query executed. No rows returned." }],
+          content: [
+            { type: "text", text: "✅ Query executed. No rows returned." },
+          ],
         };
       }
 
@@ -110,11 +142,13 @@ server.registerTool(
       };
     } catch (err) {
       return {
-        content: [{ type: "text", text: `❌ Query error:\n${(err as Error).message}` }],
+        content: [
+          { type: "text", text: `❌ Query error:\n${(err as Error).message}` },
+        ],
         isError: true,
       };
     }
-  }
+  },
 );
 
 // ---------------------------------------------------------------------------
@@ -181,10 +215,14 @@ server.registerTool(
       type ColRow = (typeof columns)[number];
       type FkRow = (typeof foreignKeys)[number];
       type IdxRow = (typeof indexes)[number];
-      const tables: Record<string, { columns: ColRow[]; fks: FkRow[]; indexes: IdxRow[] }> = {};
+      const tables: Record<
+        string,
+        { columns: ColRow[]; fks: FkRow[]; indexes: IdxRow[] }
+      > = {};
 
       for (const col of columns) {
-        if (!tables[col.table_name]) tables[col.table_name] = { columns: [], fks: [], indexes: [] };
+        if (!tables[col.table_name])
+          tables[col.table_name] = { columns: [], fks: [], indexes: [] };
         tables[col.table_name].columns.push(col);
       }
       for (const fk of foreignKeys) {
@@ -194,7 +232,9 @@ server.registerTool(
         if (tables[idx.table_name]) tables[idx.table_name].indexes.push(idx);
       }
 
-      const lines: string[] = [`📐 **Database schema — ${Object.keys(tables).length} table(s)**\n`];
+      const lines: string[] = [
+        `📐 **Database schema — ${Object.keys(tables).length} table(s)**\n`,
+      ];
 
       for (const [tableName, info] of Object.entries(tables)) {
         lines.push(`### ${tableName}`);
@@ -202,14 +242,16 @@ server.registerTool(
         lines.push("|--------|------|----------|---------|");
         for (const col of info.columns) {
           lines.push(
-            `| ${col.column_name} | ${col.udt_name} | ${col.is_nullable} | ${col.column_default ?? "—"} |`
+            `| ${col.column_name} | ${col.udt_name} | ${col.is_nullable} | ${col.column_default ?? "—"} |`,
           );
         }
 
         if (info.fks.length > 0) {
           lines.push("\n**Foreign Keys:**");
           for (const fk of info.fks) {
-            lines.push(`- \`${fk.from_column}\` → \`${fk.to_table}.${fk.to_column}\` (ON DELETE ${fk.delete_rule})`);
+            lines.push(
+              `- \`${fk.from_column}\` → \`${fk.to_table}.${fk.to_column}\` (ON DELETE ${fk.delete_rule})`,
+            );
           }
         }
 
@@ -226,11 +268,16 @@ server.registerTool(
       return { content: [{ type: "text", text: lines.join("\n") }] };
     } catch (err) {
       return {
-        content: [{ type: "text", text: `❌ Error fetching schema:\n${(err as Error).message}` }],
+        content: [
+          {
+            type: "text",
+            text: `❌ Error fetching schema:\n${(err as Error).message}`,
+          },
+        ],
         isError: true,
       };
     }
-  }
+  },
 );
 
 // ---------------------------------------------------------------------------
@@ -245,7 +292,9 @@ server.registerTool(
     inputSchema: {
       table: z
         .string()
-        .describe("Table name (without schema). E.g: users, companies, documents"),
+        .describe(
+          "Table name (without schema). E.g: users, companies, documents",
+        ),
     },
   },
   async ({ table }) => {
@@ -282,7 +331,12 @@ server.registerTool(
 
       if (columns.length === 0) {
         return {
-          content: [{ type: "text", text: `❌ Table "${table}" not found in the public schema.` }],
+          content: [
+            {
+              type: "text",
+              text: `❌ Table "${table}" not found in the public schema.`,
+            },
+          ],
           isError: true,
         };
       }
@@ -295,11 +349,15 @@ server.registerTool(
         "| Column | Type | Nullable | Default |",
         "|--------|------|----------|---------|",
         ...columns.map(
-          (c) => `| ${c.column_name} | ${c.data_type} | ${c.is_nullable} | ${c.column_default ?? "—"} |`
+          (c) =>
+            `| ${c.column_name} | ${c.data_type} | ${c.is_nullable} | ${c.column_default ?? "—"} |`,
         ),
         "",
         "### Constraints",
-        ...constraints.map((c) => `- \`${c.constraint_name}\` (${c.constraint_type}) → \`${c.column_name}\``),
+        ...constraints.map(
+          (c) =>
+            `- \`${c.constraint_name}\` (${c.constraint_type}) → \`${c.column_name}\``,
+        ),
         "",
         "### Sample data (up to 5 rows)",
         "```json",
@@ -310,164 +368,355 @@ server.registerTool(
       return { content: [{ type: "text", text: lines.join("\n") }] };
     } catch (err) {
       return {
-        content: [{ type: "text", text: `❌ Error describing table:\n${(err as Error).message}` }],
+        content: [
+          {
+            type: "text",
+            text: `❌ Error describing table:\n${(err as Error).message}`,
+          },
+        ],
         isError: true,
       };
     }
-  }
+  },
 );
 
 // ---------------------------------------------------------------------------
-// TOOL: list-users
+// TOOL: platform-overview
+// INTENT: "What is the state of the platform? Give me IDs to explore further."
+// Replaces list-users + list-companies (2 chained endpoint calls → 1 intent call).
 // ---------------------------------------------------------------------------
 server.registerTool(
-  "list-users",
+  "platform-overview",
   {
-    description: "Returns all registered users with their id, name, and registration date.",
-    inputSchema: {},
+    description:
+      "Returns a snapshot of the entire platform: exact counts (users, companies, documents) and a sampled list of users and companies for ID discovery. " +
+      "Use this FIRST when you need to orient yourself or find an ID before calling get-company-overview or get-user-companies. " +
+      "Entity lists are capped at 50 most recent — use the query tool with a WHERE clause to find others.",
+    inputSchema: {
+      detail: z
+        .enum(["concise", "detailed"])
+        .default("concise")
+        .describe(
+          "concise: counts + id/name only (default, saves tokens). detailed: includes timestamps and owner names.",
+        ),
+    },
   },
-  async () => {
+  async ({ detail }) => {
     try {
-      const rows = await sql`
-        SELECT id, nome, created_at
-        FROM public.usuarios
-        ORDER BY created_at DESC
-      `;
+      const [userCount, companyCount, docCount, users, companies] =
+        await Promise.all([
+          sql`SELECT COUNT(*)::int AS n FROM public.usuarios`,
+          sql`SELECT COUNT(*)::int AS n FROM public.empresas`,
+          sql`SELECT COUNT(*)::int AS n FROM public.documentos`,
+
+          detail === "concise"
+            ? sql`SELECT id, nome FROM public.usuarios ORDER BY created_at DESC LIMIT 50`
+            : sql`SELECT id, nome, created_at FROM public.usuarios ORDER BY created_at DESC LIMIT 50`,
+
+          detail === "concise"
+            ? sql`
+              SELECT e.id, e.nome, u.nome AS owner
+              FROM public.empresas e
+              JOIN public.usuarios u ON u.id = e.usuario_id
+              ORDER BY e.created_at DESC LIMIT 50
+            `
+            : sql`
+              SELECT e.id, e.nome, u.nome AS owner, e.created_at
+              FROM public.empresas e
+              JOIN public.usuarios u ON u.id = e.usuario_id
+              ORDER BY e.created_at DESC LIMIT 50
+            `,
+        ]);
+
+      const totalUsers = userCount[0].n;
+      const totalCompanies = companyCount[0].n;
+      const totalDocs = docCount[0].n;
+
+      const result = {
+        counts: {
+          users: totalUsers,
+          companies: totalCompanies,
+          documents: totalDocs,
+        },
+        users_sample: users,
+        companies_sample: companies,
+      };
+
+      const truncationNotes: string[] = [];
+      if (users.length < totalUsers)
+        truncationNotes.push(
+          `users_sample shows ${users.length}/${totalUsers} — use query tool with WHERE to find others`,
+        );
+      if (companies.length < totalCompanies)
+        truncationNotes.push(
+          `companies_sample shows ${companies.length}/${totalCompanies} — use query tool with WHERE to find others`,
+        );
+
+      const lines = [
+        `✅ Platform: ${totalUsers} user(s), ${totalCompanies} company(ies), ${totalDocs} document(s).`,
+        ...truncationNotes.map((n) => `ℹ️  ${n}`),
+        "```json",
+        JSON.stringify(result, null, 2),
+        "```",
+      ];
+
+      return { content: [{ type: "text", text: lines.join("\n") }] };
+    } catch (err) {
       return {
         content: [
           {
             type: "text",
-            text: [`✅ ${rows.length} user(s) found:`, "```json", JSON.stringify(rows, null, 2), "```"].join("\n"),
+            text: [
+              `❌ Error fetching platform overview: ${(err as Error).message}`,
+              "Next steps: verify DATABASE_URL is set and the database is reachable.",
+            ].join("\n"),
           },
         ],
+        isError: true,
       };
-    } catch (err) {
-      return { content: [{ type: "text", text: `❌ Error: ${(err as Error).message}` }], isError: true };
     }
-  }
-);
-
-// ---------------------------------------------------------------------------
-// TOOL: list-companies
-// ---------------------------------------------------------------------------
-server.registerTool(
-  "list-companies",
-  {
-    description: "Returns all registered companies, including who created them and when.",
-    inputSchema: {},
   },
-  async () => {
-    try {
-      const rows = await sql`
-        SELECT e.id, e.nome, u.nome AS owner, e.created_at
-        FROM public.empresas e
-        JOIN public.usuarios u ON u.id = e.usuario_id
-        ORDER BY e.created_at DESC
-      `;
-      return {
-        content: [
-          {
-            type: "text",
-            text: [`✅ ${rows.length} company(ies) found:`, "```json", JSON.stringify(rows, null, 2), "```"].join("\n"),
-          },
-        ],
-      };
-    } catch (err) {
-      return { content: [{ type: "text", text: `❌ Error: ${(err as Error).message}` }], isError: true };
-    }
-  }
 );
 
 // ---------------------------------------------------------------------------
 // TOOL: get-company-overview
+// INTENT: "What is the full picture of this company?"
+// One call returns: company info + team (with names) + document inventory.
+// Replaces: list-companies (get ID) → manual member query → manual docs query.
 // ---------------------------------------------------------------------------
 server.registerTool(
   "get-company-overview",
   {
-    description: "Returns full overview of a company: info, members with roles, and documents.",
+    description:
+      "Returns the full picture of one company in a single call: company metadata, team members with resolved names and roles, and document list. " +
+      "Use this after getting a company ID from platform-overview.",
     inputSchema: {
-      empresa_id: z.string().uuid().describe("Company UUID"),
+      empresa_id: z
+        .string()
+        .uuid()
+        .describe(
+          "Company UUID. Get from platform-overview → companies_sample[n].id.",
+        ),
+      detail: z
+        .enum(["concise", "detailed"])
+        .default("concise")
+        .describe(
+          "concise: names + roles only (default). detailed: adds timestamps and owner info.",
+        ),
     },
   },
-  async ({ empresa_id }) => {
+  async ({ empresa_id, detail }) => {
     try {
-      const [company, members, documents] = await Promise.all([
-        sql`
-          SELECT e.id, e.nome, u.nome AS owner, e.created_at
-          FROM public.empresas e
-          JOIN public.usuarios u ON u.id = e.usuario_id
-          WHERE e.id = ${empresa_id}
-        `,
-        sql`
-          SELECT u.nome AS usuario, em.role, em.created_at AS joined_at
-          FROM public.empresa_membros em
-          JOIN public.usuarios u ON u.id = em.usuario_id
-          WHERE em.empresa_id = ${empresa_id}
-          ORDER BY em.created_at
-        `,
-        sql`
-          SELECT id, nome, created_at
-          FROM public.documentos
-          WHERE empresa_id = ${empresa_id}
-          ORDER BY created_at DESC
-        `,
-      ]);
+      const [company, memberCount, members, docCount, documents] =
+        await Promise.all([
+          detail === "concise"
+            ? sql`
+              SELECT e.nome, u.nome AS owner
+              FROM public.empresas e
+              JOIN public.usuarios u ON u.id = e.usuario_id
+              WHERE e.id = ${empresa_id}
+            `
+            : sql`
+              SELECT e.id, e.nome, u.nome AS owner, e.created_at
+              FROM public.empresas e
+              JOIN public.usuarios u ON u.id = e.usuario_id
+              WHERE e.id = ${empresa_id}
+            `,
+
+          sql`SELECT COUNT(*)::int AS n FROM public.empresa_membros WHERE empresa_id = ${empresa_id}`,
+
+          detail === "concise"
+            ? sql`
+              SELECT u.nome AS member, em.role
+              FROM public.empresa_membros em
+              JOIN public.usuarios u ON u.id = em.usuario_id
+              WHERE em.empresa_id = ${empresa_id}
+              ORDER BY em.created_at
+              LIMIT 50
+            `
+            : sql`
+              SELECT u.id AS usuario_id, u.nome AS member, em.role, em.created_at AS joined_at
+              FROM public.empresa_membros em
+              JOIN public.usuarios u ON u.id = em.usuario_id
+              WHERE em.empresa_id = ${empresa_id}
+              ORDER BY em.created_at
+              LIMIT 50
+            `,
+
+          sql`SELECT COUNT(*)::int AS n FROM public.documentos WHERE empresa_id = ${empresa_id}`,
+
+          detail === "concise"
+            ? sql`SELECT nome FROM public.documentos WHERE empresa_id = ${empresa_id} ORDER BY created_at DESC LIMIT 50`
+            : sql`SELECT id, nome, created_at FROM public.documentos WHERE empresa_id = ${empresa_id} ORDER BY created_at DESC LIMIT 50`,
+        ]);
 
       if (company.length === 0) {
-        return { content: [{ type: "text", text: `❌ Company not found: ${empresa_id}` }], isError: true };
+        return {
+          content: [
+            {
+              type: "text",
+              text: [
+                `❌ Company not found: ${empresa_id}`,
+                "Next steps: call platform-overview to get valid company IDs.",
+              ].join("\n"),
+            },
+          ],
+          isError: true,
+        };
       }
 
+      const totalMembers = memberCount[0].n;
+      const totalDocs = docCount[0].n;
+
+      const memberNote = paginationNote(
+        "members",
+        members.length,
+        totalMembers,
+        `SELECT u.nome, em.role FROM empresa_membros em JOIN usuarios u ON u.id = em.usuario_id WHERE em.empresa_id = '${empresa_id}' ORDER BY em.created_at OFFSET 50 LIMIT 50`,
+      );
+      const docNote = paginationNote(
+        "documents",
+        documents.length,
+        totalDocs,
+        `SELECT id, nome FROM documentos WHERE empresa_id = '${empresa_id}' ORDER BY created_at DESC OFFSET 50 LIMIT 50`,
+      );
+
       const result = { company: company[0], members, documents };
+      const lines = [
+        `✅ Company "${company[0].nome}": showing ${members.length}/${totalMembers} member(s), ${documents.length}/${totalDocs} document(s).`,
+        ...[memberNote, docNote].filter(Boolean),
+        "```json",
+        JSON.stringify(result, null, 2),
+        "```",
+      ];
+
+      return { content: [{ type: "text", text: lines.join("\n") }] };
+    } catch (err) {
       return {
         content: [
           {
             type: "text",
-            text: ["✅ Company overview:", "```json", JSON.stringify(result, null, 2), "```"].join("\n"),
+            text: [
+              `❌ Error fetching company overview: ${(err as Error).message}`,
+              `Next steps: verify empresa_id "${empresa_id}" is a valid UUID from platform-overview.`,
+            ].join("\n"),
           },
         ],
+        isError: true,
       };
-    } catch (err) {
-      return { content: [{ type: "text", text: `❌ Error: ${(err as Error).message}` }], isError: true };
     }
-  }
+  },
 );
 
 // ---------------------------------------------------------------------------
 // TOOL: get-user-companies
+// INTENT: "What companies is this user part of and in what capacity?"
+// One call returns: every company the user owns or is a member of, with role.
+// Replaces: list-users (get ID) → list-companies (filter) → separate member query.
 // ---------------------------------------------------------------------------
 server.registerTool(
   "get-user-companies",
   {
-    description: "Returns all companies a user owns or is a member of, with their role in each.",
+    description:
+      "Returns every company a user owns or belongs to, with their role in each — in a single call. " +
+      "Use this after getting a user ID from platform-overview.",
     inputSchema: {
-      usuario_id: z.string().uuid().describe("User UUID"),
+      usuario_id: z
+        .string()
+        .uuid()
+        .describe(
+          "User UUID. Get from platform-overview → users_sample[n].id.",
+        ),
+      detail: z
+        .enum(["concise", "detailed"])
+        .default("concise")
+        .describe(
+          "concise: company name + role only (default). detailed: adds company ID and timestamps.",
+        ),
     },
   },
-  async ({ usuario_id }) => {
+  async ({ usuario_id, detail }) => {
     try {
-      const rows = await sql`
-        SELECT
-          e.id AS empresa_id,
-          e.nome AS empresa,
-          CASE WHEN e.usuario_id = ${usuario_id} THEN 'owner' ELSE em.role END AS role,
-          e.created_at
-        FROM public.empresas e
-        LEFT JOIN public.empresa_membros em ON em.empresa_id = e.id AND em.usuario_id = ${usuario_id}
-        WHERE e.usuario_id = ${usuario_id} OR em.usuario_id = ${usuario_id}
-        ORDER BY e.created_at DESC
-      `;
+      const [totalRes, rows] = await Promise.all([
+        sql`
+          SELECT COUNT(*)::int AS n
+          FROM public.empresas e
+          LEFT JOIN public.empresa_membros em ON em.empresa_id = e.id AND em.usuario_id = ${usuario_id}
+          WHERE e.usuario_id = ${usuario_id} OR em.usuario_id = ${usuario_id}
+        `,
+
+        detail === "concise"
+          ? sql`
+              SELECT
+                e.nome AS company,
+                CASE WHEN e.usuario_id = ${usuario_id} THEN 'owner' ELSE em.role END AS role
+              FROM public.empresas e
+              LEFT JOIN public.empresa_membros em ON em.empresa_id = e.id AND em.usuario_id = ${usuario_id}
+              WHERE e.usuario_id = ${usuario_id} OR em.usuario_id = ${usuario_id}
+              ORDER BY e.created_at DESC
+              LIMIT 50
+            `
+          : sql`
+              SELECT
+                e.id AS company_id,
+                e.nome AS company,
+                CASE WHEN e.usuario_id = ${usuario_id} THEN 'owner' ELSE em.role END AS role,
+                e.created_at
+              FROM public.empresas e
+              LEFT JOIN public.empresa_membros em ON em.empresa_id = e.id AND em.usuario_id = ${usuario_id}
+              WHERE e.usuario_id = ${usuario_id} OR em.usuario_id = ${usuario_id}
+              ORDER BY e.created_at DESC
+              LIMIT 50
+            `,
+      ]);
+
+      const total = totalRes[0].n;
+
+      if (rows.length === 0) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: [
+                `✅ User ${usuario_id} belongs to no companies.`,
+                "They may exist but not yet own or be invited to any company.",
+              ].join("\n"),
+            },
+          ],
+        };
+      }
+
+      const note = paginationNote(
+        "companies",
+        rows.length,
+        total,
+        `SELECT e.nome, em.role FROM empresas e LEFT JOIN empresa_membros em ON em.empresa_id = e.id AND em.usuario_id = '${usuario_id}' WHERE e.usuario_id = '${usuario_id}' OR em.usuario_id = '${usuario_id}' ORDER BY e.created_at DESC OFFSET 50 LIMIT 50`,
+      );
+
+      const lines = [
+        `✅ showing ${rows.length}/${total} company(ies) for this user.`,
+        ...(note ? [note] : []),
+        "```json",
+        JSON.stringify(rows, null, 2),
+        "```",
+      ];
+
+      return { content: [{ type: "text", text: lines.join("\n") }] };
+    } catch (err) {
       return {
         content: [
           {
             type: "text",
-            text: [`✅ ${rows.length} company(ies) for this user:`, "```json", JSON.stringify(rows, null, 2), "```"].join("\n"),
+            text: [
+              `❌ Error fetching user companies: ${(err as Error).message}`,
+              `Next steps: verify usuario_id "${usuario_id}" is a valid UUID from platform-overview.`,
+            ].join("\n"),
           },
         ],
+        isError: true,
       };
-    } catch (err) {
-      return { content: [{ type: "text", text: `❌ Error: ${(err as Error).message}` }], isError: true };
     }
-  }
+  },
 );
 
 // ---------------------------------------------------------------------------
@@ -511,7 +760,7 @@ server.registerResource(
         ],
       };
     }
-  }
+  },
 );
 
 // ---------------------------------------------------------------------------
