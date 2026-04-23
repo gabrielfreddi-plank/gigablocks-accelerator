@@ -22,7 +22,7 @@ jobs:
           node-version: 24.x
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm turbo run lint
+      - run: pnpm lint
 
   typecheck:
     name: Typecheck
@@ -35,7 +35,7 @@ jobs:
           node-version: 24.x
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm turbo run typecheck
+      - run: pnpm typecheck
 
   test:
     name: Test
@@ -48,7 +48,7 @@ jobs:
           node-version: 24.x
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm turbo run test
+      - run: pnpm test
 
   test-e2e:
     name: E2E Tests
@@ -61,8 +61,8 @@ jobs:
           node-version: 24.x
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter home exec playwright install chromium --with-deps
-      - run: pnpm turbo run test:e2e
+      - run: pnpm exec playwright install chromium --with-deps
+      - run: pnpm test:e2e
 
   test-integration:
     name: Integration Tests
@@ -75,8 +75,8 @@ jobs:
           node-version: 24.x
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter home exec playwright install chromium --with-deps
-      - run: pnpm turbo run test:integration
+      - run: pnpm exec playwright install chromium --with-deps
+      - run: pnpm test:integration
 
   build:
     name: Build
@@ -93,7 +93,7 @@ jobs:
         run: |
           test -n "$NEXT_PUBLIC_SUPABASE_URL"
           test -n "$NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"
-      - run: pnpm turbo run build
+      - run: pnpm build
 
   deploy-preview:
     name: Deploy to Vercel Preview
