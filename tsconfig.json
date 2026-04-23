@@ -47,6 +47,7 @@
     "node_modules",
     "apps",
     "packages",
+    "mcp",
     "tests",
     "playwright.config.ts"
   ]
