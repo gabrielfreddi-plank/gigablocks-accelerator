@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useEffect, type FormEvent } from "react";
 import { signUp } from "@/lib/actions/auth";
 import { AuthInput } from "@/components/ui/auth-input";
 import {
@@ -12,9 +12,23 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { posthog } from "@/lib/posthog/client";
 
 export default function SignUpPage() {
   const [state, action, pending] = useActionState(signUp, null);
+
+  useEffect(() => {
+    if (state?.error) {
+      posthog.capture("sign_up_failed", { error: state.error });
+    }
+  }, [state?.error]);
+
+  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    const data = new FormData(e.currentTarget);
+    posthog.capture("sign_up_submitted", {
+      email: data.get("email") as string,
+    });
+  }
 
   return (
     <Card className="w-full max-w-sm border-zinc-800 bg-zinc-950 text-white shadow-xl">
@@ -30,19 +44,41 @@ export default function SignUpPage() {
           >
             <rect width="28" height="28" rx="6" fill="#3B82F6" />
             <rect x="7" y="7" width="6" height="6" rx="1" fill="white" />
-            <rect x="15" y="7" width="6" height="6" rx="1" fill="white" fillOpacity="0.6" />
-            <rect x="7" y="15" width="6" height="6" rx="1" fill="white" fillOpacity="0.6" />
+            <rect
+              x="15"
+              y="7"
+              width="6"
+              height="6"
+              rx="1"
+              fill="white"
+              fillOpacity="0.6"
+            />
+            <rect
+              x="7"
+              y="15"
+              width="6"
+              height="6"
+              rx="1"
+              fill="white"
+              fillOpacity="0.6"
+            />
             <rect x="15" y="15" width="6" height="6" rx="1" fill="white" />
           </svg>
         </div>
-        <CardTitle className="text-center text-xl font-semibold">Create account</CardTitle>
+        <CardTitle className="text-center text-xl font-semibold">
+          Create account
+        </CardTitle>
         <CardDescription className="text-center text-zinc-400">
           Step 1 of 2 — Personal details
         </CardDescription>
       </CardHeader>
 
       <CardContent>
-        <form action={action} className="flex flex-col gap-4">
+        <form
+          action={action}
+          onSubmit={handleSubmit}
+          className="flex flex-col gap-4"
+        >
           <AuthInput
             label="Name"
             name="name"
@@ -88,7 +124,10 @@ export default function SignUpPage() {
       <CardFooter className="justify-center pb-6">
         <p className="text-sm text-zinc-500">
           Already have an account?{" "}
-          <Link href="/sign-in" className="text-blue-400 hover:text-blue-300 transition-colors">
+          <Link
+            href="/sign-in"
+            className="text-blue-400 hover:text-blue-300 transition-colors"
+          >
             Sign in
           </Link>
         </p>
