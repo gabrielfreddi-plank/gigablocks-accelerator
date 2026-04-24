@@ -3,8 +3,9 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const supabase = await createClient();
 
   const {
@@ -19,7 +20,7 @@ export async function GET(
   const { data: member } = await supabase
     .from("company_members")
     .select("role")
-    .eq("company_id", params.id)
+    .eq("company_id", id)
     .eq("user_id", user.id)
     .single();
 
@@ -30,7 +31,7 @@ export async function GET(
   const { count, error } = await supabase
     .from("company_members")
     .select("*", { count: "exact", head: true })
-    .eq("company_id", params.id);
+    .eq("company_id", id);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });

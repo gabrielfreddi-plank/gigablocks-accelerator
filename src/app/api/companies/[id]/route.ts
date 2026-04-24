@@ -3,8 +3,9 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const supabase = await createClient();
 
   const {
@@ -19,7 +20,7 @@ export async function GET(
   const { data: member } = await supabase
     .from("company_members")
     .select("role")
-    .eq("company_id", params.id)
+    .eq("company_id", id)
     .eq("user_id", user.id)
     .single();
 
@@ -30,7 +31,7 @@ export async function GET(
   const { data: company, error } = await supabase
     .from("companies")
     .select("*")
-    .eq("id", params.id)
+    .eq("id", id)
     .single();
 
   if (error) {
@@ -42,8 +43,9 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const supabase = await createClient();
 
   const {
@@ -58,7 +60,7 @@ export async function PUT(
   const { data: member } = await supabase
     .from("company_members")
     .select("role")
-    .eq("company_id", params.id)
+    .eq("company_id", id)
     .eq("user_id", user.id)
     .single();
 
@@ -70,7 +72,7 @@ export async function PUT(
   const { error } = await supabase
     .from("companies")
     .update(body)
-    .eq("id", params.id);
+    .eq("id", id);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
@@ -79,7 +81,7 @@ export async function PUT(
   const { data: updated } = await supabase
     .from("companies")
     .select("*")
-    .eq("id", params.id)
+    .eq("id", id)
     .single();
 
   return NextResponse.json(updated);

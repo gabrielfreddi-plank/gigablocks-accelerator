@@ -1,8 +1,17 @@
 import { createClient } from "@/lib/supabase/server";
-import { Button } from "@/components/ui/button";
 
 interface CompanyOverviewProps {
   companyId: string;
+}
+
+interface User {
+  name: string | null;
+}
+
+interface Member {
+  user_id: string;
+  role: string;
+  users: User;
 }
 
 export async function CompanyOverview({ companyId }: CompanyOverviewProps) {
@@ -19,10 +28,13 @@ export async function CompanyOverview({ companyId }: CompanyOverviewProps) {
     .select("*", { count: "exact", head: true })
     .eq("company_id", companyId);
 
-  const { data: members } = await supabase
+  const { data: membersData } = await supabase
     .from("company_members")
     .select("*, users(name)")
     .eq("company_id", companyId);
+
+  const members = membersData as Member[] | null;
+
 
   if (!company) {
     return (
@@ -89,7 +101,7 @@ export async function CompanyOverview({ companyId }: CompanyOverviewProps) {
               >
                 <div>
                   <p className="text-sm text-zinc-200">
-                    {(member.users as any)?.name || "Unnamed"}
+                    {member.users?.name || "Unnamed"}
                   </p>
                   <p className="text-xs text-zinc-500">{member.user_id}</p>
                 </div>
