@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
-import { CompanyOverview } from "@/components/admin/CompanyOverview";
+import { CompanyEditor } from "@/components/admin/CompanyEditor";
 
-export default async function DashboardPage() {
+export default async function CompanyPage() {
   const supabase = await createClient();
 
   const {
@@ -12,12 +12,13 @@ export default async function DashboardPage() {
     return <div>Not authenticated</div>;
   }
 
-  // Get user's companies (where they are owner/admin)
+  // Get user's primary company
   const { data: companies } = await supabase
     .from("company_members")
-    .select("company_id, role, companies(id, name)")
+    .select("company_id, companies(id, name)")
     .eq("user_id", user.id)
-    .in("role", ["owner", "admin"]);
+    .in("role", ["owner", "admin"])
+    .limit(1);
 
   const company = companies?.[0]?.companies;
 
@@ -26,11 +27,9 @@ export default async function DashboardPage() {
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 py-10">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">
-            Dashboard
+            Company Settings
           </h1>
-          <p className="mt-2 text-zinc-400">
-            No companies found. Create one to get started.
-          </p>
+          <p className="mt-2 text-zinc-400">No company found</p>
         </div>
       </main>
     );
@@ -40,12 +39,17 @@ export default async function DashboardPage() {
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 py-10">
       <div>
         <h1 className="text-3xl font-semibold tracking-tight">
-          Dashboard
+          Company Settings
         </h1>
-        <p className="mt-1 text-zinc-400">Company overview and management</p>
+        <p className="mt-1 text-zinc-400">Edit your company information</p>
       </div>
 
-      <CompanyOverview companyId={company.id} />
+      <div className="max-w-2xl rounded-xl border border-zinc-800 bg-zinc-900/40 p-6">
+        <CompanyEditor
+          companyId={company.id}
+          initialName={company.name}
+        />
+      </div>
     </main>
   );
 }
