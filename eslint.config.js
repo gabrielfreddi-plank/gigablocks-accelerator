@@ -12,7 +12,7 @@ export default [
   js.configs.recommended,
   eslintConfigPrettier,
   ...tseslint.configs.recommended,
-  globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts", "apps/**", "packages/**"]),
+  globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts", "apps/**", "packages/**", "mcp/**"]),
   {
     ...pluginReact.configs.flat.recommended,
     languageOptions: {

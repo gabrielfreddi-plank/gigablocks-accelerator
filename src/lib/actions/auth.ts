@@ -38,7 +38,7 @@ export async function signUp(_: unknown, formData: FormData) {
     email,
     password,
     options: {
-      data: { nome: name },
+      data: { name },
     },
   });
 
@@ -64,7 +64,7 @@ export async function signUp(_: unknown, formData: FormData) {
   redirect("/onboarding");
 }
 
-export async function createEmpresa(_: unknown, formData: FormData) {
+export async function createCompany(_: unknown, formData: FormData) {
   const supabase = await createClient();
 
   const {
@@ -75,9 +75,9 @@ export async function createEmpresa(_: unknown, formData: FormData) {
 
   const companyName = formData.get("name") as string;
 
-  const { error } = await supabase.from("empresas").insert({
-    nome: companyName,
-    usuario_id: user.id,
+  const { error } = await supabase.from("companies").insert({
+    name: companyName,
+    user_id: user.id,
   });
 
   if (error) {

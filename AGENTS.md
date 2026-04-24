@@ -1,5 +1,21 @@
 # Gigablocks Accelerator — Codebase Guide
 
+## 🌍 Language Policy: English Only (EN)
+
+**All code identifiers, variable names, database schema, function names, comments, documentation, UI copy, error messages, commit messages, and PR descriptions MUST be in English only.**
+
+This includes:
+- ✅ Function names: `getUserCompanies()` not `obterEmpresasDoUsuario()`
+- ✅ Variable names: `userName` not `nomeDoUsuario`
+- ✅ Table names: `users` not `usuarios`
+- ✅ Column names: `company_id` not `id_empresa`
+- ✅ Comments: English only, no Portuguese/Spanish
+- ✅ Commit messages: Conventional Commits in English
+- ✅ PR descriptions: English only
+- ✅ Documentation: All files (including this AGENTS.md) in English
+
+**No exceptions.** This applies to all new and existing code.
+
 ## Monorepo
 
 Turborepo + pnpm workspaces.
@@ -90,10 +106,12 @@ src/
 
 | Table | Description |
 |--------|-----------|
-| `usuarios` | User profile (auto-created via trigger on `auth.users` insert) |
-| `empresas` | Organization created during onboarding |
-| `empresa_membros` | Company members with `role` (owner auto-inserted via trigger) |
-| `documentos` | Documents per company |
+| `users` | User profile (auto-created via trigger on `auth.users` insert) |
+| `companies` | Organization created during onboarding |
+| `company_members` | Company members with `role` (owner auto-inserted via trigger) |
+| `documents` | Documents per company |
+
+**Note:** All tables and columns use English names only (per EN-Only Language Policy above).
 
 ## CSS / Design Tokens
 
@@ -120,9 +138,9 @@ pnpm test         # vitest
 pnpm test:e2e     # playwright
 ```
 
-## Language
+## Language (EN-Only)
 
-**All copy in this project must be written in English** — UI labels, button text, error messages, comments, documentation, commit messages, and PR descriptions. No Portuguese (or any other language) in new content.
+**See Language Policy above.** All code, identifiers, schema, and content must be in English. Zero tolerance for non-English code identifiers or variable names. This is enforced in code review.
 
 ## Conventions
 
