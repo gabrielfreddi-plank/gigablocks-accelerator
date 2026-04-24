@@ -26,7 +26,7 @@ export default async function DashboardLayout({
   const isAdmin = memberData && memberData.length > 0;
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white">
+    <div className="min-h-screen bg-zinc-950 font-sans text-white">
       <header className="border-b border-zinc-800">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
           <nav className="flex items-center gap-6">

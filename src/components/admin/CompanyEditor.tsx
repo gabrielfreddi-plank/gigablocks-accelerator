@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { updateCompany } from "@/lib/actions/company";
+import { Button } from "@/components/ui/button";
 
 interface CompanyEditorProps {
   companyId: string;
@@ -62,13 +63,13 @@ export function CompanyEditor({
         </div>
       )}
 
-      <button
+      <Button
         type="submit"
         disabled={loading}
-        className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:opacity-50"
+        className="bg-blue-500 hover:bg-blue-600 text-white border-transparent disabled:opacity-50"
       >
         {loading ? "Saving..." : "Save Changes"}
-      </button>
+      </Button>
     </form>
   );
 }

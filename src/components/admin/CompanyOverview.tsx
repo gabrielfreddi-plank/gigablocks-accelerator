@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { Button } from "@/components/ui/button";
 
 interface CompanyOverviewProps {
   companyId: string;
@@ -54,8 +55,8 @@ export async function CompanyOverview({ companyId }: CompanyOverviewProps) {
             </div>
           </div>
           <a
-            href="/admin/company"
-            className="inline-flex rounded-lg border border-zinc-700 px-4 py-2 text-sm text-zinc-200 transition hover:border-zinc-500 hover:bg-zinc-900"
+            href="/company"
+            className="inline-flex items-center justify-center rounded-lg bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 text-sm font-medium transition"
           >
             Edit Company
           </a>
