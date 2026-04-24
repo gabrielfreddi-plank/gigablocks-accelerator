@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { createEmpresa } from "@/lib/actions/auth";
+import { createCompany } from "@/lib/actions/auth";
 import { AuthInput } from "@/components/ui/auth-input";
 import {
   Card,
@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/card";
 
 export default function OnboardingPage() {
-  const [state, action, pending] = useActionState(createEmpresa, null);
+  const [state, action, pending] = useActionState(createCompany, null);
 
   return (
     <Card className="w-full max-w-sm border-zinc-800 bg-zinc-950 text-white shadow-xl">

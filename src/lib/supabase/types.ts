@@ -14,126 +14,126 @@ export type Database = {
   }
   public: {
     Tables: {
-      documentos: {
+      documents: {
         Row: {
-          conteudo_original: string | null
+          original_content: string | null
           created_at: string
-          empresa_id: string
+          company_id: string
           id: string
-          nome: string
+          name: string
           updated_at: string
         }
         Insert: {
-          conteudo_original?: string | null
+          original_content?: string | null
           created_at?: string
-          empresa_id: string
+          company_id: string
           id?: string
-          nome: string
+          name: string
           updated_at?: string
         }
         Update: {
-          conteudo_original?: string | null
+          original_content?: string | null
           created_at?: string
-          empresa_id?: string
+          company_id?: string
           id?: string
-          nome?: string
+          name?: string
           updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "documentos_empresa_id_fkey"
-            columns: ["empresa_id"]
+            foreignKeyName: "documents_company_id_fkey"
+            columns: ["company_id"]
             isOneToOne: false
-            referencedRelation: "empresas"
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]
       }
-      empresa_membros: {
+      company_members: {
         Row: {
           created_at: string
-          empresa_id: string
+          company_id: string
           role: string
-          usuario_id: string
+          user_id: string
         }
         Insert: {
           created_at?: string
-          empresa_id: string
+          company_id: string
           role?: string
-          usuario_id: string
+          user_id: string
         }
         Update: {
           created_at?: string
-          empresa_id?: string
+          company_id?: string
           role?: string
-          usuario_id?: string
+          user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "empresa_membros_empresa_id_fkey"
-            columns: ["empresa_id"]
+            foreignKeyName: "company_members_company_id_fkey"
+            columns: ["company_id"]
             isOneToOne: false
-            referencedRelation: "empresas"
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "empresa_membros_usuario_id_fkey"
-            columns: ["usuario_id"]
+            foreignKeyName: "company_members_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
-            referencedRelation: "usuarios"
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
       }
-      empresas: {
+      companies: {
         Row: {
           created_at: string
           id: string
-          nome: string
+          name: string
           updated_at: string
-          usuario_id: string
+          user_id: string
         }
         Insert: {
           created_at?: string
           id?: string
-          nome: string
+          name: string
           updated_at?: string
-          usuario_id?: string
+          user_id?: string
         }
         Update: {
           created_at?: string
           id?: string
-          nome?: string
+          name?: string
           updated_at?: string
-          usuario_id?: string
+          user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "empresas_usuario_id_fkey"
-            columns: ["usuario_id"]
+            foreignKeyName: "companies_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
-            referencedRelation: "usuarios"
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
       }
-      usuarios: {
+      users: {
         Row: {
           created_at: string
           id: string
-          nome: string | null
+          name: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
           id: string
-          nome?: string | null
+          name?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
           id?: string
-          nome?: string | null
+          name?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -143,8 +143,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      is_empresa_member: {
-        Args: { target_empresa_id: string }
+      is_company_member: {
+        Args: { target_company_id: string }
         Returns: boolean
       }
     }
@@ -254,7 +254,7 @@ export type Enums<
 }
   ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
-    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    ? DefaultSchema["Enums"][EnumName]
     : never
 
 export type CompositeTypes<
@@ -264,14 +264,14 @@ export type CompositeTypes<
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["CompositeTypes"]
     : never = never,
-> = PublicCompositeTypeNameOrOptions extends {
+> = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
-    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][CompositeTypeName]
     : never
 
 export const Constants = {

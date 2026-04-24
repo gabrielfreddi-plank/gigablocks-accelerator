@@ -8,20 +8,20 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- ============================================================
--- TABLE: usuarios (mirrors auth.users)
+-- TABLE: users (mirrors auth.users)
 -- ============================================================
-CREATE TABLE public.usuarios (
+CREATE TABLE public.users (
   id         UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  nome       TEXT,
+  name       TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TRIGGER set_usuarios_updated_at
-  BEFORE UPDATE ON public.usuarios
+CREATE TRIGGER set_users_updated_at
+  BEFORE UPDATE ON public.users
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
--- Auto-create usuarios row on auth signup
+-- Auto-create users row on auth signup
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -29,7 +29,7 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  INSERT INTO public.usuarios (id, nome)
+  INSERT INTO public.users (id, name)
   VALUES (NEW.id, NEW.raw_user_meta_data ->> 'full_name');
   RETURN NEW;
 END;
@@ -40,65 +40,65 @@ CREATE TRIGGER on_auth_user_created
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
 -- ============================================================
--- TABLE: empresas
+-- TABLE: companies
 -- ============================================================
-CREATE TABLE public.empresas (
+CREATE TABLE public.companies (
   id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  nome       TEXT NOT NULL,
-  usuario_id UUID NOT NULL DEFAULT auth.uid() REFERENCES public.usuarios(id) ON DELETE CASCADE,
+  name       TEXT NOT NULL,
+  user_id    UUID NOT NULL DEFAULT auth.uid() REFERENCES public.users(id) ON DELETE CASCADE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TRIGGER set_empresas_updated_at
-  BEFORE UPDATE ON public.empresas
+CREATE TRIGGER set_companies_updated_at
+  BEFORE UPDATE ON public.companies
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 -- ============================================================
--- TABLE: empresa_membros (join table — replaces scalar `membros` field)
+-- TABLE: company_members (join table — replaces scalar `members` field)
 -- ============================================================
-CREATE TABLE public.empresa_membros (
-  empresa_id UUID NOT NULL REFERENCES public.empresas(id) ON DELETE CASCADE,
-  usuario_id UUID NOT NULL REFERENCES public.usuarios(id) ON DELETE CASCADE,
+CREATE TABLE public.company_members (
+  company_id UUID NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE,
+  user_id    UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
   role       TEXT NOT NULL DEFAULT 'member',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  PRIMARY KEY (empresa_id, usuario_id)
+  PRIMARY KEY (company_id, user_id)
 );
 
--- Auto-insert owner as member when empresa is created
-CREATE OR REPLACE FUNCTION public.handle_new_empresa()
+-- Auto-insert owner as member when company is created
+CREATE OR REPLACE FUNCTION public.handle_new_company()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.empresa_membros (empresa_id, usuario_id, role)
-  VALUES (NEW.id, NEW.usuario_id, 'owner');
+  INSERT INTO public.company_members (company_id, user_id, role)
+  VALUES (NEW.id, NEW.user_id, 'owner');
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER on_empresa_created
-  AFTER INSERT ON public.empresas
-  FOR EACH ROW EXECUTE FUNCTION public.handle_new_empresa();
+CREATE TRIGGER on_company_created
+  AFTER INSERT ON public.companies
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_company();
 
 -- ============================================================
--- TABLE: documentos
+-- TABLE: documents
 -- ============================================================
-CREATE TABLE public.documentos (
-  id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  nome              TEXT NOT NULL,
-  conteudo_original TEXT,
-  empresa_id        UUID NOT NULL REFERENCES public.empresas(id) ON DELETE CASCADE,
-  created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+CREATE TABLE public.documents (
+  id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name             TEXT NOT NULL,
+  original_content TEXT,
+  company_id       UUID NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE,
+  created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TRIGGER set_documentos_updated_at
-  BEFORE UPDATE ON public.documentos
+CREATE TRIGGER set_documents_updated_at
+  BEFORE UPDATE ON public.documents
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 -- ============================================================
--- RLS helper: avoids self-referential policy loops on empresa_membros
+-- RLS helper: avoids self-referential policy loops on company_members
 -- ============================================================
-CREATE OR REPLACE FUNCTION public.is_empresa_member(target_empresa_id UUID)
+CREATE OR REPLACE FUNCTION public.is_company_member(target_company_id UUID)
 RETURNS BOOLEAN
 LANGUAGE sql
 SECURITY DEFINER
@@ -106,59 +106,59 @@ SET search_path = public
 AS $$
   SELECT EXISTS (
     SELECT 1
-    FROM public.empresa_membros em
-    WHERE em.empresa_id = target_empresa_id
-      AND em.usuario_id = auth.uid()
+    FROM public.company_members cm
+    WHERE cm.company_id = target_company_id
+      AND cm.user_id = auth.uid()
   );
 $$;
 
 -- ============================================================
 -- ROW LEVEL SECURITY
 -- ============================================================
-ALTER TABLE public.usuarios        ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.empresas        ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.empresa_membros ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.documentos      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.users           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.companies       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.company_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.documents       ENABLE ROW LEVEL SECURITY;
 
--- usuarios
-CREATE POLICY "usuarios: select own"
-  ON public.usuarios FOR SELECT USING (auth.uid() = id);
-CREATE POLICY "usuarios: update own"
-  ON public.usuarios FOR UPDATE USING (auth.uid() = id) WITH CHECK (auth.uid() = id);
+-- users
+CREATE POLICY "users: select own"
+  ON public.users FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "users: update own"
+  ON public.users FOR UPDATE USING (auth.uid() = id) WITH CHECK (auth.uid() = id);
 
--- empresas
-CREATE POLICY "empresas: select for members"
-  ON public.empresas FOR SELECT USING (public.is_empresa_member(empresas.id));
-CREATE POLICY "empresas: insert by authenticated"
-  ON public.empresas FOR INSERT WITH CHECK (usuario_id = auth.uid());
-CREATE POLICY "empresas: update by owner"
-  ON public.empresas FOR UPDATE USING (usuario_id = auth.uid()) WITH CHECK (usuario_id = auth.uid());
-CREATE POLICY "empresas: delete by owner"
-  ON public.empresas FOR DELETE USING (usuario_id = auth.uid());
+-- companies
+CREATE POLICY "companies: select for members"
+  ON public.companies FOR SELECT USING (public.is_company_member(companies.id));
+CREATE POLICY "companies: insert by authenticated"
+  ON public.companies FOR INSERT WITH CHECK (user_id = auth.uid());
+CREATE POLICY "companies: update by owner"
+  ON public.companies FOR UPDATE USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
+CREATE POLICY "companies: delete by owner"
+  ON public.companies FOR DELETE USING (user_id = auth.uid());
 
--- empresa_membros
-CREATE POLICY "empresa_membros: select for members"
-  ON public.empresa_membros FOR SELECT USING (public.is_empresa_member(empresa_membros.empresa_id));
-CREATE POLICY "empresa_membros: insert by owner"
-  ON public.empresa_membros FOR INSERT
-  WITH CHECK (EXISTS (SELECT 1 FROM public.empresas WHERE id = empresa_id AND usuario_id = auth.uid()));
-CREATE POLICY "empresa_membros: delete by owner"
-  ON public.empresa_membros FOR DELETE
-  USING (EXISTS (SELECT 1 FROM public.empresas WHERE id = empresa_id AND usuario_id = auth.uid()));
+-- company_members
+CREATE POLICY "company_members: select for members"
+  ON public.company_members FOR SELECT USING (public.is_company_member(company_members.company_id));
+CREATE POLICY "company_members: insert by owner"
+  ON public.company_members FOR INSERT
+  WITH CHECK (EXISTS (SELECT 1 FROM public.companies WHERE id = company_id AND user_id = auth.uid()));
+CREATE POLICY "company_members: delete by owner"
+  ON public.company_members FOR DELETE
+  USING (EXISTS (SELECT 1 FROM public.companies WHERE id = company_id AND user_id = auth.uid()));
 
--- documentos
-CREATE POLICY "documentos: select for members"
-  ON public.documentos FOR SELECT USING (public.is_empresa_member(documentos.empresa_id));
-CREATE POLICY "documentos: insert for members"
-  ON public.documentos FOR INSERT WITH CHECK (public.is_empresa_member(documentos.empresa_id));
-CREATE POLICY "documentos: update for members"
-  ON public.documentos FOR UPDATE USING (public.is_empresa_member(documentos.empresa_id));
-CREATE POLICY "documentos: delete for members"
-  ON public.documentos FOR DELETE USING (public.is_empresa_member(documentos.empresa_id));
+-- documents
+CREATE POLICY "documents: select for members"
+  ON public.documents FOR SELECT USING (public.is_company_member(documents.company_id));
+CREATE POLICY "documents: insert for members"
+  ON public.documents FOR INSERT WITH CHECK (public.is_company_member(documents.company_id));
+CREATE POLICY "documents: update for members"
+  ON public.documents FOR UPDATE USING (public.is_company_member(documents.company_id));
+CREATE POLICY "documents: delete for members"
+  ON public.documents FOR DELETE USING (public.is_company_member(documents.company_id));
 
 -- ============================================================
 -- INDEXES
 -- ============================================================
-CREATE INDEX idx_empresas_usuario_id ON public.empresas (usuario_id);
-CREATE INDEX idx_empresa_membros_usuario_empresa ON public.empresa_membros (usuario_id, empresa_id);
-CREATE INDEX idx_documentos_empresa_id ON public.documentos (empresa_id);
+CREATE INDEX idx_companies_user_id ON public.companies (user_id);
+CREATE INDEX idx_company_members_user_company ON public.company_members (user_id, company_id);
+CREATE INDEX idx_documents_company_id ON public.documents (company_id);

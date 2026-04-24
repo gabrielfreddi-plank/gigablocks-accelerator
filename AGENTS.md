@@ -106,12 +106,12 @@ src/
 
 | Table | Description |
 |--------|-----------|
-| `usuarios` | User profile (auto-created via trigger on `auth.users` insert) |
-| `empresas` | Organization created during onboarding |
-| `empresa_membros` | Company members with `role` (owner auto-inserted via trigger) |
-| `documentos` | Documents per company |
+| `users` | User profile (auto-created via trigger on `auth.users` insert) |
+| `companies` | Organization created during onboarding |
+| `company_members` | Company members with `role` (owner auto-inserted via trigger) |
+| `documents` | Documents per company |
 
-**Note:** Existing tables use Portuguese names for backwards compatibility. All new tables and columns MUST use English names only (per EN-Only Language Policy above).
+**Note:** All tables and columns use English names only (per EN-Only Language Policy above).
 
 ## CSS / Design Tokens
 

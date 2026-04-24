@@ -405,26 +405,26 @@ server.registerTool(
     try {
       const [userCount, companyCount, docCount, users, companies] =
         await Promise.all([
-          sql`SELECT COUNT(*)::int AS n FROM public.usuarios`,
-          sql`SELECT COUNT(*)::int AS n FROM public.empresas`,
-          sql`SELECT COUNT(*)::int AS n FROM public.documentos`,
+          sql`SELECT COUNT(*)::int AS n FROM public.users`,
+          sql`SELECT COUNT(*)::int AS n FROM public.companies`,
+          sql`SELECT COUNT(*)::int AS n FROM public.documents`,
 
           detail === "concise"
-            ? sql`SELECT id, nome FROM public.usuarios ORDER BY created_at DESC LIMIT 50`
-            : sql`SELECT id, nome, created_at FROM public.usuarios ORDER BY created_at DESC LIMIT 50`,
+            ? sql`SELECT id, name FROM public.users ORDER BY created_at DESC LIMIT 50`
+            : sql`SELECT id, name, created_at FROM public.users ORDER BY created_at DESC LIMIT 50`,
 
           detail === "concise"
             ? sql`
-              SELECT e.id, e.nome, u.nome AS owner
-              FROM public.empresas e
-              JOIN public.usuarios u ON u.id = e.usuario_id
-              ORDER BY e.created_at DESC LIMIT 50
+              SELECT c.id, c.name, u.name AS owner
+              FROM public.companies c
+              JOIN public.users u ON u.id = c.user_id
+              ORDER BY c.created_at DESC LIMIT 50
             `
             : sql`
-              SELECT e.id, e.nome, u.nome AS owner, e.created_at
-              FROM public.empresas e
-              JOIN public.usuarios u ON u.id = e.usuario_id
-              ORDER BY e.created_at DESC LIMIT 50
+              SELECT c.id, c.name, u.name AS owner, c.created_at
+              FROM public.companies c
+              JOIN public.users u ON u.id = c.user_id
+              ORDER BY c.created_at DESC LIMIT 50
             `,
         ]);
 
@@ -491,7 +491,7 @@ server.registerTool(
       "Returns the full picture of one company in a single call: company metadata, team members with resolved names and roles, and document list. " +
       "Use this after getting a company ID from platform-overview.",
     inputSchema: {
-      empresa_id: z
+      company_id: z
         .string()
         .uuid()
         .describe(
@@ -511,43 +511,43 @@ server.registerTool(
         await Promise.all([
           detail === "concise"
             ? sql`
-              SELECT e.nome, u.nome AS owner
-              FROM public.empresas e
-              JOIN public.usuarios u ON u.id = e.usuario_id
-              WHERE e.id = ${empresa_id}
+              SELECT c.name, u.name AS owner
+              FROM public.companies c
+              JOIN public.users u ON u.id = c.user_id
+              WHERE c.id = ${company_id}
             `
             : sql`
-              SELECT e.id, e.nome, u.nome AS owner, e.created_at
-              FROM public.empresas e
-              JOIN public.usuarios u ON u.id = e.usuario_id
-              WHERE e.id = ${empresa_id}
+              SELECT c.id, c.name, u.name AS owner, c.created_at
+              FROM public.companies c
+              JOIN public.users u ON u.id = c.user_id
+              WHERE c.id = ${company_id}
             `,
 
-          sql`SELECT COUNT(*)::int AS n FROM public.empresa_membros WHERE empresa_id = ${empresa_id}`,
+          sql`SELECT COUNT(*)::int AS n FROM public.company_members WHERE company_id = ${company_id}`,
 
           detail === "concise"
             ? sql`
-              SELECT u.nome AS member, em.role
-              FROM public.empresa_membros em
-              JOIN public.usuarios u ON u.id = em.usuario_id
-              WHERE em.empresa_id = ${empresa_id}
-              ORDER BY em.created_at
+              SELECT u.name AS member, cm.role
+              FROM public.company_members cm
+              JOIN public.users u ON u.id = cm.user_id
+              WHERE cm.company_id = ${company_id}
+              ORDER BY cm.created_at
               LIMIT 50
             `
             : sql`
-              SELECT u.id AS usuario_id, u.nome AS member, em.role, em.created_at AS joined_at
-              FROM public.empresa_membros em
-              JOIN public.usuarios u ON u.id = em.usuario_id
-              WHERE em.empresa_id = ${empresa_id}
-              ORDER BY em.created_at
+              SELECT u.id AS user_id, u.name AS member, cm.role, cm.created_at AS joined_at
+              FROM public.company_members cm
+              JOIN public.users u ON u.id = cm.user_id
+              WHERE cm.company_id = ${company_id}
+              ORDER BY cm.created_at
               LIMIT 50
             `,
 
-          sql`SELECT COUNT(*)::int AS n FROM public.documentos WHERE empresa_id = ${empresa_id}`,
+          sql`SELECT COUNT(*)::int AS n FROM public.documents WHERE company_id = ${company_id}`,
 
           detail === "concise"
-            ? sql`SELECT nome FROM public.documentos WHERE empresa_id = ${empresa_id} ORDER BY created_at DESC LIMIT 50`
-            : sql`SELECT id, nome, created_at FROM public.documentos WHERE empresa_id = ${empresa_id} ORDER BY created_at DESC LIMIT 50`,
+            ? sql`SELECT name FROM public.documents WHERE company_id = ${company_id} ORDER BY created_at DESC LIMIT 50`
+            : sql`SELECT id, name, created_at FROM public.documents WHERE company_id = ${company_id} ORDER BY created_at DESC LIMIT 50`,
         ]);
 
       if (company.length === 0) {
@@ -556,7 +556,7 @@ server.registerTool(
             {
               type: "text",
               text: [
-                `❌ Company not found: ${empresa_id}`,
+                `❌ Company not found: ${company_id}`,
                 "Next steps: call platform-overview to get valid company IDs.",
               ].join("\n"),
             },
@@ -572,18 +572,18 @@ server.registerTool(
         "members",
         members.length,
         totalMembers,
-        `SELECT u.nome, em.role FROM empresa_membros em JOIN usuarios u ON u.id = em.usuario_id WHERE em.empresa_id = '${empresa_id}' ORDER BY em.created_at OFFSET 50 LIMIT 50`,
+        `SELECT u.name, cm.role FROM company_members cm JOIN users u ON u.id = cm.user_id WHERE cm.company_id = '${company_id}' ORDER BY cm.created_at OFFSET 50 LIMIT 50`,
       );
       const docNote = paginationNote(
         "documents",
         documents.length,
         totalDocs,
-        `SELECT id, nome FROM documentos WHERE empresa_id = '${empresa_id}' ORDER BY created_at DESC OFFSET 50 LIMIT 50`,
+        `SELECT id, name FROM documents WHERE company_id = '${company_id}' ORDER BY created_at DESC OFFSET 50 LIMIT 50`,
       );
 
       const result = { company: company[0], members, documents };
       const lines = [
-        `✅ Company "${company[0].nome}": showing ${members.length}/${totalMembers} member(s), ${documents.length}/${totalDocs} document(s).`,
+        `✅ Company "${company[0].name}": showing ${members.length}/${totalMembers} member(s), ${documents.length}/${totalDocs} document(s).`,
         ...[memberNote, docNote].filter(Boolean),
         "```json",
         JSON.stringify(result, null, 2),
@@ -621,7 +621,7 @@ server.registerTool(
       "Returns every company a user owns or belongs to, with their role in each — in a single call. " +
       "Use this after getting a user ID from platform-overview.",
     inputSchema: {
-      usuario_id: z
+      user_id: z
         .string()
         .uuid()
         .describe(
@@ -635,37 +635,37 @@ server.registerTool(
         ),
     },
   },
-  async ({ usuario_id, detail }) => {
+  async ({ user_id, detail }) => {
     try {
       const [totalRes, rows] = await Promise.all([
         sql`
           SELECT COUNT(*)::int AS n
-          FROM public.empresas e
-          LEFT JOIN public.empresa_membros em ON em.empresa_id = e.id AND em.usuario_id = ${usuario_id}
-          WHERE e.usuario_id = ${usuario_id} OR em.usuario_id = ${usuario_id}
+          FROM public.companies c
+          LEFT JOIN public.company_members cm ON cm.company_id = c.id AND cm.user_id = ${user_id}
+          WHERE c.user_id = ${user_id} OR cm.user_id = ${user_id}
         `,
 
         detail === "concise"
           ? sql`
               SELECT
-                e.nome AS company,
-                CASE WHEN e.usuario_id = ${usuario_id} THEN 'owner' ELSE em.role END AS role
-              FROM public.empresas e
-              LEFT JOIN public.empresa_membros em ON em.empresa_id = e.id AND em.usuario_id = ${usuario_id}
-              WHERE e.usuario_id = ${usuario_id} OR em.usuario_id = ${usuario_id}
-              ORDER BY e.created_at DESC
+                c.name AS company,
+                CASE WHEN c.user_id = ${user_id} THEN 'owner' ELSE cm.role END AS role
+              FROM public.companies c
+              LEFT JOIN public.company_members cm ON cm.company_id = c.id AND cm.user_id = ${user_id}
+              WHERE c.user_id = ${user_id} OR cm.user_id = ${user_id}
+              ORDER BY c.created_at DESC
               LIMIT 50
             `
           : sql`
               SELECT
-                e.id AS company_id,
-                e.nome AS company,
-                CASE WHEN e.usuario_id = ${usuario_id} THEN 'owner' ELSE em.role END AS role,
-                e.created_at
-              FROM public.empresas e
-              LEFT JOIN public.empresa_membros em ON em.empresa_id = e.id AND em.usuario_id = ${usuario_id}
-              WHERE e.usuario_id = ${usuario_id} OR em.usuario_id = ${usuario_id}
-              ORDER BY e.created_at DESC
+                c.id AS company_id,
+                c.name AS company,
+                CASE WHEN c.user_id = ${user_id} THEN 'owner' ELSE cm.role END AS role,
+                c.created_at
+              FROM public.companies c
+              LEFT JOIN public.company_members cm ON cm.company_id = c.id AND cm.user_id = ${user_id}
+              WHERE c.user_id = ${user_id} OR cm.user_id = ${user_id}
+              ORDER BY c.created_at DESC
               LIMIT 50
             `,
       ]);
@@ -678,7 +678,7 @@ server.registerTool(
             {
               type: "text",
               text: [
-                `✅ User ${usuario_id} belongs to no companies.`,
+                `✅ User ${user_id} belongs to no companies.`,
                 "They may exist but not yet own or be invited to any company.",
               ].join("\n"),
             },
@@ -690,7 +690,7 @@ server.registerTool(
         "companies",
         rows.length,
         total,
-        `SELECT e.nome, em.role FROM empresas e LEFT JOIN empresa_membros em ON em.empresa_id = e.id AND em.usuario_id = '${usuario_id}' WHERE e.usuario_id = '${usuario_id}' OR em.usuario_id = '${usuario_id}' ORDER BY e.created_at DESC OFFSET 50 LIMIT 50`,
+        `SELECT c.name, cm.role FROM companies c LEFT JOIN company_members cm ON cm.company_id = c.id AND cm.user_id = '${user_id}' WHERE c.user_id = '${user_id}' OR cm.user_id = '${user_id}' ORDER BY c.created_at DESC OFFSET 50 LIMIT 50`,
       );
 
       const lines = [
