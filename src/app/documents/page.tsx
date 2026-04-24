@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { extractPolicies, type Policy } from "@/lib/actions/extractPolicies";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,6 +35,9 @@ export default function DocumentsPage() {
     error: null,
   });
 
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+
   return (
     <main className="h-screen bg-zinc-950 flex flex-col font-sans">
       <header className="px-8 py-5 border-b border-zinc-800 flex-shrink-0">
@@ -60,6 +63,8 @@ export default function DocumentsPage() {
               id="title"
               name="title"
               placeholder="e.g., IT Security Policy 2024"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
               className="bg-zinc-900 border-zinc-700 text-zinc-200 placeholder:text-zinc-500 focus-visible:ring-blue-600 focus-visible:ring-offset-zinc-950"
             />
           </div>
@@ -72,7 +77,9 @@ export default function DocumentsPage() {
               id="content"
               name="content"
               placeholder="Paste your document text here..."
-              className="flex-1 min-h-[400px] resize-none rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2.5 text-sm text-zinc-200 placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-0 transition-colors"
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              className="flex-1 min-h-[100px] resize-none rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2.5 text-sm text-zinc-200 placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-0 transition-colors"
             />
           </div>
 
