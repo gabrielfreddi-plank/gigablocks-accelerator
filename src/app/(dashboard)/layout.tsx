@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { signOut } from "@/lib/actions/auth";
+import { Button } from "@/components/ui/button";
 
 export default async function DashboardLayout({
   children,
@@ -53,6 +55,15 @@ export default async function DashboardLayout({
               </div>
             )}
           </nav>
+          <form action={signOut}>
+            <Button
+              type="submit"
+              variant="ghost"
+              className="text-zinc-400 hover:text-zinc-200"
+            >
+              Sign out
+            </Button>
+          </form>
         </div>
       </header>
       {children}
