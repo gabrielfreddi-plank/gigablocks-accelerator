@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import Link from "next/link";
 
 interface CompanyOverviewProps {
   companyId: string;
@@ -113,6 +114,23 @@ export async function CompanyOverview({ companyId }: CompanyOverviewProps) {
           </div>
         </article>
       )}
+
+      <article className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-6">
+        <div className="space-y-4">
+          <div>
+            <p className="text-sm font-semibold text-zinc-200">Documents</p>
+            <p className="mt-2 text-sm text-zinc-400">
+              Manage company documents containing rules, permissions, and governance policies.
+            </p>
+          </div>
+          <Link
+            href={`/documents/${company.id}/add-document`}
+            className="inline-flex items-center justify-center rounded-lg bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 text-sm font-medium transition cursor-pointer"
+          >
+            Add Document
+          </Link>
+        </div>
+      </article>
     </div>
   );
 }
