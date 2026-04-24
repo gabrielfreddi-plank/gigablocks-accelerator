@@ -125,6 +125,19 @@ export default function AddDocumentPage() {
             />
           </div>
 
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="apiKey" className="text-zinc-300 text-sm">
+              Anthropic API Key
+            </Label>
+            <Input
+              id="apiKey"
+              name="apiKey"
+              type="password"
+              placeholder="sk-ant-... (leave blank to use server key)"
+              className="bg-zinc-900 border-zinc-700 text-zinc-200 placeholder:text-zinc-500 focus-visible:ring-blue-600 focus-visible:ring-offset-zinc-950"
+            />
+          </div>
+
           {(checkError || extractState.error) && (
             <p className="text-red-400 text-sm">
               {checkError ?? extractState.error}

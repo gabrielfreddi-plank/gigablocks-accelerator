@@ -1,7 +1,7 @@
 "use server";
 
 import { FilePart, generateText, Output } from "ai";
-import { anthropic } from "@ai-sdk/anthropic";
+import { createAnthropic } from "@ai-sdk/anthropic";
 import z from "zod";
 
 const policySchema = z.object({
@@ -25,14 +25,25 @@ export async function extractPolicies(
 ): Promise<ExtractPoliciesState> {
   const title = formData.get("title") as string;
   const content = formData.get("content") as string;
+  const apiKey = formData.get("apiKey") as string | null;
 
   if (!content?.trim()) {
     return { policies: null, error: "Document content is required" };
   }
 
+  const resolvedKey = apiKey?.trim() || process.env.ANTHROPIC_API_KEY;
+  if (!resolvedKey) {
+    return {
+      policies: null,
+      error:
+        "Anthropic API key is required. Provide it in the input or set the ANTHROPIC_API_KEY environment variable.",
+    };
+  }
+  const model = createAnthropic({ apiKey: resolvedKey })("claude-haiku-4-5");
+
   try {
     const response = await generateText({
-      model: anthropic("claude-haiku-4-5"),
+      model,
       system:
         "You are an IT policy extraction assistant. Extract all IT-related policies from the provided document. " +
         "IT-related policies include: information security rules, access control and authorization, password and credential policies, " +
