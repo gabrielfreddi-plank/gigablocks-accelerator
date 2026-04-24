@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "gigablocks-database": {
+      "command": "npx",
+      "args": ["tsx", "mcp/database/src/index.ts"],
+    },
+    "gigablocks-posthog": {
+      "command": "npx",
+      "args": ["tsx", "mcp/posthog/src/index.ts"]
+    }
+  }
+}
