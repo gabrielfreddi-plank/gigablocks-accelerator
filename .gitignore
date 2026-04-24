@@ -55,8 +55,5 @@ blob-report/
 # Claude Code local settings
 .claude/
 
-# MCP local config (contains credentials and absolute paths)
-.mcp.json
-
 # pnpm local store
 .pnpm-store/

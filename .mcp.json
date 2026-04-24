@@ -2,7 +2,7 @@
   "mcpServers": {
     "gigablocks-database": {
       "command": "npx",
-      "args": ["tsx", "mcp/database/src/index.ts"],
+      "args": ["tsx", "mcp/database/src/index.ts"]
     },
     "gigablocks-posthog": {
       "command": "npx",
