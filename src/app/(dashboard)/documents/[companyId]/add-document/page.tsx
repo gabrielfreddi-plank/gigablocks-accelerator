@@ -3,10 +3,7 @@
 import { useActionState, useState, useTransition, useRef } from "react";
 import { useParams } from "next/navigation";
 import { extractPolicies, type Policy } from "@/lib/actions/extractPolicies";
-import {
-  addDocument,
-  checkDocumentExists,
-} from "@/lib/actions/documents";
+import { addDocument, checkDocumentExists } from "@/lib/actions/documents";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

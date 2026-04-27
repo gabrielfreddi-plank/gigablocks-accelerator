@@ -1,8 +1,9 @@
 "use server";
 
-import { FilePart, generateText, Output } from "ai";
-import { createAnthropic } from "@ai-sdk/anthropic";
-import z from "zod";
+import Anthropic from "@anthropic-ai/sdk";
+import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
+import type { MessageParam } from "@anthropic-ai/sdk/resources/messages.js";
+import { z } from "zod";
 
 const policySchema = z.object({
   title: z.string().describe("The title of the policy"),
@@ -39,49 +40,72 @@ export async function extractPolicies(
         "Anthropic API key is required. Provide it in the input or set the ANTHROPIC_API_KEY environment variable.",
     };
   }
-  const model = createAnthropic({ apiKey: resolvedKey })("claude-haiku-4-5");
+
+  const client = new Anthropic({ apiKey: resolvedKey });
+  const model = "claude-haiku-4-5";
+
+  const systemPrompt =
+    "You are an IT policy extraction assistant. Extract all IT-related policies from the provided document. " +
+    "IT-related policies include: information security rules, access control and authorization, password and credential policies, " +
+    "data classification and handling, network security, device management, software licensing, incident response, " +
+    "acceptable use policies, backup and recovery, and compliance requirements. " +
+    "If no IT-related policies are found, return an empty array.";
 
   try {
-    const response = await generateText({
+    const message = await client.messages.create({
       model,
-      system:
-        "You are an IT policy extraction assistant. Extract all IT-related policies from the provided document. " +
-        "IT-related policies include: information security rules, access control and authorization, password and credential policies, " +
-        "data classification and handling, network security, device management, software licensing, incident response, " +
-        "acceptable use policies, backup and recovery, and compliance requirements. " +
-        "If no IT-related policies are found, return an empty array.",
+      max_tokens: 1024,
+      system: systemPrompt,
       messages: [
         {
           role: "user",
           content: [
             {
-              type: "file",
-              data: Buffer.from(content, "utf-8"),
-              mediaType: "text/plain",
-              providerOptions: {
-                anthropic: {
-                  title: title || "Document",
-                },
+              type: "document",
+              source: {
+                type: "text",
+                media_type: "text/plain",
+                data: content,
               },
-            } as FilePart,
+              title: title || "Document",
+              citations: { enabled: false },
+            },
             {
               type: "text",
               text: "Extract all IT-related policies from the document above.",
             },
           ],
         },
-      ],
-      output: Output.object({
-        schema: z.array(policySchema),
-      }),
+      ] satisfies MessageParam[],
+      temperature: 0.2,
+      output_config: {
+        format: zodOutputFormat(z.array(policySchema)),
+      },
     });
 
-    return { policies: response.output, error: null };
-  } catch (err) {
+    if (message.stop_reason === "max_tokens") {
+      throw new Error(
+        "Document too large: response was cut off before all policies could be extracted. Try a shorter document.",
+      );
+    }
+
+    const firstBlock = message.content[0];
+    if (!firstBlock || firstBlock.type !== "text") {
+      throw new Error(
+        "Error extracting policies: Unexpected response format from LLM",
+      );
+    }
+
+    const policies = z
+      .array(policySchema)
+      .parse(JSON.parse(firstBlock.text ?? "[]"));
+
+    return { policies, error: null };
+  } catch (error) {
     return {
       policies: null,
       error:
-        err instanceof Error ? err.message : "An unexpected error occurred",
+        error instanceof Error ? error.message : "An unexpected error occurred",
     };
   }
 }

@@ -18,13 +18,12 @@
     "pw:install": "playwright install"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "^3.0.71",
+    "@anthropic-ai/sdk": "^0.91.1",
     "@base-ui/react": "^1.4.0",
     "@radix-ui/react-label": "^2.1.8",
     "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.104.0",
     "@tailwindcss/postcss": "^4.2.2",
-    "ai": "^6.0.168",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.8.0",
