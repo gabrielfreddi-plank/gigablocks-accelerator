@@ -1,4 +1,7 @@
-import type { MessageParam, ToolUseBlock } from "@anthropic-ai/sdk/resources/messages";
+import type {
+  MessageParam,
+  ToolUseBlock,
+} from "@anthropic-ai/sdk/resources/messages";
 import { createUIMessageStream } from "ai";
 
 import type { ChatMessage } from "@/lib/ai/contracts/chatSchema";
@@ -8,7 +11,10 @@ import type { ToolRegistryPort } from "@/lib/ai/ports/toolRegistry";
 const MAX_TOOL_STEPS = 4;
 
 function toTextContent(message: ChatMessage): string {
-  if (typeof message.content === "string" && message.content.trim().length > 0) {
+  if (
+    typeof message.content === "string" &&
+    message.content.trim().length > 0
+  ) {
     return message.content;
   }
 
@@ -140,6 +146,7 @@ export function runChatStream(params: {
 
           const parsedInput = tool.inputSchema.safeParse(toolUse.input);
           if (!parsedInput.success) {
+            console.error(parsedInput.error.issues);
             const errorText = "Invalid tool input";
             writer.write({
               type: "tool-output-error",
@@ -150,7 +157,7 @@ export function runChatStream(params: {
             toolResultBlocks.push({
               type: "tool_result",
               tool_use_id: toolUse.id,
-              content: errorText,
+              content: parsedInput.error.issues.map((issue) => issue.message).join("\n"),
               is_error: true,
             });
 
@@ -170,7 +177,7 @@ export function runChatStream(params: {
               tool_use_id: toolUse.id,
               content: serializeToolResult(output),
             });
-          } catch {
+          } catch (error) {
             const errorText = "Tool execution failed";
             writer.write({
               type: "tool-output-error",
@@ -181,7 +188,7 @@ export function runChatStream(params: {
             toolResultBlocks.push({
               type: "tool_result",
               tool_use_id: toolUse.id,
-              content: errorText,
+              content: error instanceof Error ? error.message : errorText,
               is_error: true,
             });
           }
