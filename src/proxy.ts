@@ -25,7 +25,7 @@ export async function proxy(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
   const isAuthRoute = pathname.startsWith("/sign-in") || pathname.startsWith("/sign-up");
-  const isProtected = pathname.startsWith("/dashboard") || pathname.startsWith("/onboarding");
+  const isProtected = pathname.startsWith("/dashboard") || pathname.startsWith("/onboarding") || pathname.startsWith("/documents");
   const isRootRoute = pathname === "/";
 
   if (!user && isProtected) {
