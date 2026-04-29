@@ -20,7 +20,12 @@ function toTextContent(message: ChatMessage): string {
 
   if (message.parts?.length) {
     return message.parts
-      .filter((part) => part.type === "text")
+      .filter(
+        (part): part is { type: "text"; text: string } =>
+          typeof part === "object" &&
+          part !== null &&
+          (part as Record<string, unknown>).type === "text",
+      )
       .map((part) => part.text)
       .join("\n");
   }
@@ -157,7 +162,9 @@ export function runChatStream(params: {
             toolResultBlocks.push({
               type: "tool_result",
               tool_use_id: toolUse.id,
-              content: parsedInput.error.issues.map((issue) => issue.message).join("\n"),
+              content: parsedInput.error.issues
+                .map((issue) => issue.message)
+                .join("\n"),
               is_error: true,
             });
 
