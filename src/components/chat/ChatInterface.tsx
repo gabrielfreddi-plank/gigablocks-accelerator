@@ -70,7 +70,12 @@ export function ChatInterface() {
                   {message.parts.map((part, i) => {
                     if (part.type === "text") {
                       return (
-                        <MessageResponse key={`${message.id}-${i}`}>
+                        <MessageResponse
+                          key={`${message.id}-${i}`}
+                          controls={{ code: { copy: true, download: false } }}
+                          shikiTheme={["github-light", "github-dark"]}
+                          isAnimating={isBusy}
+                        >
                           {part.text}
                         </MessageResponse>
                       );
