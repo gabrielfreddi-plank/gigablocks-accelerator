@@ -24,7 +24,7 @@ export default async function RootLayout({
   } = await supabase.auth.getUser();
 
   return (
-    <html lang="en" className={cn("font-sans", geist.variable)}>
+    <html lang="en" className={cn("dark font-sans", geist.variable)}>
       <body>
         {/* Suspense necessário por causa do useSearchParams dentro do PostHogProvider */}
         <Suspense>

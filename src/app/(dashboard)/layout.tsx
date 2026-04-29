@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { signOut } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 export default async function DashboardLayout({
   children,
@@ -27,6 +28,14 @@ export default async function DashboardLayout({
                 Gigablocks
               </p>
               <p className="text-sm text-zinc-300">Dashboard</p>
+            </div>
+            <div className="flex items-center gap-4 text-sm">
+              <Link href="/dashboard" className="text-zinc-400 hover:text-zinc-200">
+                Home
+              </Link>
+              <Link href="/chat" className="text-zinc-400 hover:text-zinc-200">
+                Chat
+              </Link>
             </div>
           </nav>
           <form action={signOut}>
