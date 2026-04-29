@@ -1,0 +1,42 @@
+import { createUIMessageStreamResponse } from "ai";
+import { NextRequest, NextResponse } from "next/server";
+
+import { runChatStream } from "@/lib/ai/application/runChatStream";
+import { chatRequestSchema } from "@/lib/ai/contracts/chatSchema";
+import { AnthropicChatModel } from "@/lib/ai/infrastructure/anthropicChatModel";
+import { ToolRegistry } from "@/lib/ai/infrastructure/toolRegistry";
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const parsedBody = chatRequestSchema.safeParse(body);
+
+    if (!parsedBody.success) {
+      return NextResponse.json(
+        { error: "Invalid request payload" },
+        { status: 400 },
+      );
+    }
+
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: "ANTHROPIC_API_KEY is not configured" },
+        { status: 500 },
+      );
+    }
+
+    const stream = runChatStream({
+      messages: parsedBody.data.messages,
+      chatModel: new AnthropicChatModel(apiKey),
+      toolRegistry: new ToolRegistry(),
+    });
+
+    return createUIMessageStreamResponse({ stream });
+  } catch {
+    return NextResponse.json(
+      { error: "Unexpected server error while creating chat stream" },
+      { status: 500 },
+    );
+  }
+}
