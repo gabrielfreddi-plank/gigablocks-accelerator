@@ -8,7 +8,7 @@ import type { ChatMessage } from "@/lib/ai/contracts/chatSchema";
 import type { ChatModelPort } from "@/lib/ai/ports/chatModel";
 import type { ToolRegistryPort } from "@/lib/ai/ports/toolRegistry";
 
-const MAX_TOOL_STEPS = 4;
+const MAX_TOOL_STEPS = 6;
 
 function toTextContent(message: ChatMessage): string {
   if (
