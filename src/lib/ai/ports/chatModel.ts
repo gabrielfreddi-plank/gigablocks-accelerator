@@ -1,4 +1,8 @@
-import type { Message, MessageParam, Tool } from "@anthropic-ai/sdk/resources/messages";
+import type {
+  Message,
+  MessageParam,
+  Tool,
+} from "@anthropic-ai/sdk/resources/messages";
 
 export interface ChatModelStreamParams {
   messages: MessageParam[];

@@ -15,8 +15,14 @@ const inputSchema = z.object({
     .max(5)
     .optional()
     .describe("Maximum number of results to return (default 5)"),
-  country: z.string().optional().describe("Country to focus search on, e.g. 'brazil'"),
-  startDate: z.string().optional().describe("Start date filter, format YYYY-MM-DD"),
+  country: z
+    .string()
+    .optional()
+    .describe("Country to focus search on, e.g. 'brazil'"),
+  startDate: z
+    .string()
+    .optional()
+    .describe("Start date filter, format YYYY-MM-DD"),
   endDate: z.string().optional().describe("End date filter, format YYYY-MM-DD"),
 });
 
@@ -34,7 +40,8 @@ export const webSearchTool: ToolDefinition = {
       },
       maxResults: {
         type: "number",
-        description: "Maximum number of results to return (default 5, maximum 5)",
+        description:
+          "Maximum number of results to return (default 5, maximum 5)",
       },
       country: {
         type: "string",
@@ -53,7 +60,8 @@ export const webSearchTool: ToolDefinition = {
     additionalProperties: false,
   },
   execute: async (input) => {
-    const { query, maxResults, country, startDate, endDate } = inputSchema.parse(input);
+    const { query, maxResults, country, startDate, endDate } =
+      inputSchema.parse(input);
     const apiKey = process.env.TAVILY_API_KEY;
     if (!apiKey) throw new Error("TAVILY_API_KEY is not set");
 

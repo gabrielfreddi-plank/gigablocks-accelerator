@@ -1,5 +1,9 @@
 import Anthropic from "@anthropic-ai/sdk";
-import type { Message, MessageParam, Tool } from "@anthropic-ai/sdk/resources/messages";
+import type {
+  Message,
+  MessageParam,
+  Tool,
+} from "@anthropic-ai/sdk/resources/messages";
 
 import type { ChatModelPort } from "@/lib/ai/ports/chatModel";
 

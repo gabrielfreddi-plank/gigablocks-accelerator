@@ -4,7 +4,9 @@ import { z } from "zod";
 import type { ToolDefinition } from "@/lib/ai/ports/toolRegistry";
 
 const inputSchema = z.object({
-  expression: z.string().describe("Math expression to evaluate, e.g. '2 * (3 + 4)'"),
+  expression: z
+    .string()
+    .describe("Math expression to evaluate, e.g. '2 * (3 + 4)'"),
 });
 
 export const calculatorTool: ToolDefinition = {

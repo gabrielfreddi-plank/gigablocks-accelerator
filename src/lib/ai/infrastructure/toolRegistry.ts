@@ -1,4 +1,7 @@
-import type { ToolDefinition, ToolRegistryPort } from "@/lib/ai/ports/toolRegistry";
+import type {
+  ToolDefinition,
+  ToolRegistryPort,
+} from "@/lib/ai/ports/toolRegistry";
 import {
   calculatorTool,
   getCurrentTimeTool,
