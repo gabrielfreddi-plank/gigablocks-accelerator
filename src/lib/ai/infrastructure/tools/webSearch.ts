@@ -34,7 +34,7 @@ export const webSearchTool: ToolDefinition = {
       },
       maxResults: {
         type: "number",
-        description: "Maximum number of results to return (default 5, maximum 10)",
+        description: "Maximum number of results to return (default 5, maximum 5)",
       },
       country: {
         type: "string",
