@@ -20,8 +20,9 @@ export async function POST(request: NextRequest) {
 
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
+      console.error("ANTHROPIC_API_KEY is not configured.");
       return NextResponse.json(
-        { error: "ANTHROPIC_API_KEY is not configured" },
+        { error: "AI Model is currently unavailable" },
         { status: 500 },
       );
     }

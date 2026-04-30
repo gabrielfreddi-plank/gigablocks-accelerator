@@ -5,7 +5,10 @@ import type {
   Tool,
 } from "@anthropic-ai/sdk/resources/messages";
 
-import type { ChatModelPort } from "@/lib/ai/ports/chatModel";
+import type {
+  ChatModelPort,
+  ChatModelStreamParams,
+} from "@/lib/ai/ports/chatModel";
 
 const DEFAULT_MODEL = "claude-haiku-4-5";
 
@@ -16,16 +19,12 @@ export class AnthropicChatModel implements ChatModelPort {
     this.client = new Anthropic({ apiKey });
   }
 
-  async stream(params: {
-    messages: MessageParam[];
-    tools: Tool[];
-    onTextDelta: (delta: string) => void;
-  }): Promise<Message> {
+  async stream(params: ChatModelStreamParams): Promise<Message> {
     const stream = this.client.messages.stream({
       model: DEFAULT_MODEL,
-      max_tokens: 2048,
+      max_tokens: 8192,
       messages: params.messages,
-      tools: params.tools,
+      ...(params.tools.length > 0 ? { tools: params.tools } : {}),
       ...(params.system ? { system: params.system } : {}),
     });
 

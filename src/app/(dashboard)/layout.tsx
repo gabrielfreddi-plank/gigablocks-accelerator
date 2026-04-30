@@ -30,11 +30,20 @@ export default async function DashboardLayout({
               <p className="text-sm text-zinc-300">Dashboard</p>
             </div>
             <div className="flex items-center gap-4 text-sm">
-              <Link href="/dashboard" className="text-zinc-400 hover:text-zinc-200">
+              <Link
+                href="/dashboard"
+                className="text-zinc-400 hover:text-zinc-200"
+              >
                 Home
               </Link>
               <Link href="/chat" className="text-zinc-400 hover:text-zinc-200">
                 Chat
+              </Link>
+              <Link
+                href="/canvas"
+                className="text-zinc-400 hover:text-zinc-200"
+              >
+                Canvas
               </Link>
             </div>
           </nav>
