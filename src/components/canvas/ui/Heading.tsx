@@ -21,8 +21,6 @@ export function Heading({ props }: BaseComponentProps<HeadingProps>) {
   const Tag = level as "h1" | "h2" | "h3" | "h4";
 
   return (
-    <Tag className={cn(levelStyles[level] ?? levelStyles.h2)}>
-      {props.text}
-    </Tag>
+    <Tag className={cn(levelStyles[level] ?? levelStyles.h2)}>{props.text}</Tag>
   );
 }

@@ -9,20 +9,34 @@ interface CheckboxProps {
   label: string;
   name: string;
   checked?: boolean | null;
-  checks?: Array<{ type: string; message: string; args?: Record<string, unknown> }> | null;
+  checks?: Array<{
+    type: string;
+    message: string;
+    args?: Record<string, unknown>;
+  }> | null;
   validateOn?: "change" | "blur" | "submit" | null;
 }
 
-export function Checkbox({ props, bindings, emit }: BaseComponentProps<CheckboxProps>) {
-  const { value: checked, setValue: setChecked, errors, validate, hasValidation, resolvedValidateOn } =
-    useFormField<boolean>({
-      propValue: props.checked,
-      bindingPath: bindings?.checked,
-      defaultValue: false,
-      checks: props.checks,
-      validateOn: props.validateOn,
-      defaultValidateOn: "change",
-    });
+export function Checkbox({
+  props,
+  bindings,
+  emit,
+}: BaseComponentProps<CheckboxProps>) {
+  const {
+    value: checked,
+    setValue: setChecked,
+    errors,
+    validate,
+    hasValidation,
+    resolvedValidateOn,
+  } = useFormField<boolean>({
+    propValue: props.checked,
+    bindingPath: bindings?.checked,
+    defaultValue: false,
+    checks: props.checks,
+    validateOn: props.validateOn,
+    defaultValidateOn: "change",
+  });
 
   const handleChange = () => {
     const next = !checked;
@@ -40,7 +54,9 @@ export function Checkbox({ props, bindings, emit }: BaseComponentProps<CheckboxP
           aria-checked={checked}
           id={props.name}
           onClick={handleChange}
-          style={checked ? { boxShadow: "0 0 10px rgba(59,130,246,0.4)" } : undefined}
+          style={
+            checked ? { boxShadow: "0 0 10px rgba(59,130,246,0.4)" } : undefined
+          }
           className={cn(
             "relative flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded",
             "transition-all duration-150 ease-out",
@@ -73,10 +89,12 @@ export function Checkbox({ props, bindings, emit }: BaseComponentProps<CheckboxP
           </svg>
         </button>
 
-        <span className={cn(
-          "text-sm leading-none transition-colors duration-100",
-          checked ? "text-white" : "text-zinc-400 group-hover:text-zinc-300",
-        )}>
+        <span
+          className={cn(
+            "text-sm leading-none transition-colors duration-100",
+            checked ? "text-white" : "text-zinc-400 group-hover:text-zinc-300",
+          )}
+        >
           {props.label}
         </span>
       </label>

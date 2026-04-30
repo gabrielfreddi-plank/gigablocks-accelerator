@@ -33,9 +33,7 @@ export function useFormField<T>({
 
   const isBound = !!bindingPath;
   const value = isBound ? (boundValue ?? defaultValue) : localValue;
-  const setValue = isBound
-    ? (setBoundValue as (v: T) => void)
-    : setLocalValue;
+  const setValue = isBound ? (setBoundValue as (v: T) => void) : setLocalValue;
 
   const resolvedValidateOn = validateOn ?? defaultValidateOn;
   const hasValidation = !!(bindingPath && checks?.length);
@@ -47,5 +45,12 @@ export function useFormField<T>({
       : undefined,
   );
 
-  return { value, setValue, errors, validate, hasValidation, resolvedValidateOn };
+  return {
+    value,
+    setValue,
+    errors,
+    validate,
+    hasValidation,
+    resolvedValidateOn,
+  };
 }

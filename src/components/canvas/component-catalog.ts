@@ -49,5 +49,14 @@ export const componentCatalog = defineCatalog(schema, {
     Toggle: shadcnComponentDefinitions.Toggle,
     ToggleGroup: shadcnComponentDefinitions.ToggleGroup,
   },
-  actions: {},
+  actions: {
+    navigate: {
+      description:
+        'Trigger navigation. Use for button presses that should load a new page or view. Param: target (string) — the destination page name (e.g. "dashboard", "settings", "profile").',
+    },
+    submit: {
+      description:
+        "Submit a form. Use for primary form submit buttons. Params: include the current form field values as key/value pairs so the next page can reference them.",
+    },
+  },
 });

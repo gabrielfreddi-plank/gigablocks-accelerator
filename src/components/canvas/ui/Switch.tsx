@@ -9,20 +9,34 @@ interface SwitchProps {
   label: string;
   name: string;
   checked?: boolean | null;
-  checks?: Array<{ type: string; message: string; args?: Record<string, unknown> }> | null;
+  checks?: Array<{
+    type: string;
+    message: string;
+    args?: Record<string, unknown>;
+  }> | null;
   validateOn?: "change" | "blur" | "submit" | null;
 }
 
-export function Switch({ props, bindings, emit }: BaseComponentProps<SwitchProps>) {
-  const { value: checked, setValue: setChecked, errors, validate, hasValidation, resolvedValidateOn } =
-    useFormField<boolean>({
-      propValue: props.checked,
-      bindingPath: bindings?.checked,
-      defaultValue: false,
-      checks: props.checks,
-      validateOn: props.validateOn,
-      defaultValidateOn: "change",
-    });
+export function Switch({
+  props,
+  bindings,
+  emit,
+}: BaseComponentProps<SwitchProps>) {
+  const {
+    value: checked,
+    setValue: setChecked,
+    errors,
+    validate,
+    hasValidation,
+    resolvedValidateOn,
+  } = useFormField<boolean>({
+    propValue: props.checked,
+    bindingPath: bindings?.checked,
+    defaultValue: false,
+    checks: props.checks,
+    validateOn: props.validateOn,
+    defaultValidateOn: "change",
+  });
 
   const handleChange = () => {
     const next = !checked;
@@ -34,7 +48,12 @@ export function Switch({ props, bindings, emit }: BaseComponentProps<SwitchProps
   return (
     <div className="flex flex-col gap-1.5">
       <label className="group flex cursor-pointer items-center justify-between gap-4 select-none">
-        <span className={cn("text-sm leading-none transition-colors duration-100", checked ? "text-white" : "text-zinc-400 group-hover:text-zinc-300")}>
+        <span
+          className={cn(
+            "text-sm leading-none transition-colors duration-100",
+            checked ? "text-white" : "text-zinc-400 group-hover:text-zinc-300",
+          )}
+        >
           {props.label}
         </span>
 
@@ -44,7 +63,9 @@ export function Switch({ props, bindings, emit }: BaseComponentProps<SwitchProps
           aria-checked={checked}
           id={props.name}
           onClick={handleChange}
-          style={checked ? { boxShadow: "0 0 10px rgba(59,130,246,0.4)" } : undefined}
+          style={
+            checked ? { boxShadow: "0 0 10px rgba(59,130,246,0.4)" } : undefined
+          }
           className={cn(
             "relative h-6 w-11 shrink-0 rounded-full border transition-all duration-200 ease-out",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 focus-visible:ring-offset-1 focus-visible:ring-offset-black",
@@ -62,9 +83,7 @@ export function Switch({ props, bindings, emit }: BaseComponentProps<SwitchProps
         </button>
       </label>
 
-      {errors.length > 0 && (
-        <p className="text-xs text-red-400">{errors[0]}</p>
-      )}
+      {errors.length > 0 && <p className="text-xs text-red-400">{errors[0]}</p>}
     </div>
   );
 }

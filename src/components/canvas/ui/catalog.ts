@@ -17,14 +17,19 @@ export const customComponentDefinitions = {
   Stack: {
     props: z.object({
       direction: z.enum(["horizontal", "vertical"]).nullable().optional(),
-      gap: z.enum(["none", "sm", "md", "lg"]).nullable().optional(),
-      align: z.enum(["start", "center", "end", "stretch"]).nullable().optional(),
-      justify: z.enum(["start", "center", "end", "between"]).nullable().optional(),
-      wrap: z.boolean().nullable().optional(),
+      gap: z.enum(["none", "sm", "md", "lg", "xl"]).nullable().optional(),
+      align: z
+        .enum(["start", "center", "end", "stretch"])
+        .nullable()
+        .optional(),
+      justify: z
+        .enum(["start", "center", "end", "between", "around"])
+        .nullable()
+        .optional(),
     }),
     events: [],
     description:
-      "Flex container, full width. direction: vertical (default)/horizontal. gap: none/sm/md (default)/lg. align: start/center/end/stretch (default). justify: start (default)/center/end/between.",
+      "Flex container, full width. Use as the default grouping wrapper inside any parent container before placing dense children (forms/content/charts). direction: vertical (default)/horizontal. gap between children: none/sm/md (default, 24px)/lg (40px)/xl (64px). align: start/center/end/stretch (default start). justify: start/center/end/between/around.",
     example: { direction: "horizontal", gap: "md", align: "center" },
   },
 
@@ -33,17 +38,33 @@ export const customComponentDefinitions = {
       title: z.string().nullable().optional(),
       description: z.string().nullable().optional(),
       padding: z.enum(["none", "sm", "md", "lg"]).nullable().optional(),
+      gap: z.enum(["none", "sm", "md", "lg"]).nullable().optional(),
       divider: z.boolean().nullable().optional(),
     }),
     events: [],
     description:
-      "Full-width semantic section container. Use instead of Card for page sections, navbar areas, content blocks. title/description render as a section header. padding: none/sm/md (default)/lg. divider: true adds a bottom border.",
-    example: { title: "Overview", description: "Summary of recent activity", padding: "md" },
+      "Full-width flex-col container. Use for page sections, navbar areas, content blocks. title/description render as a section header. padding: none/sm/md (default)/lg. gap: vertical gap between children — none/sm/md (default, 24px)/lg. divider: true adds a bottom border.",
+    example: {
+      title: "Overview",
+      description: "Summary of recent activity",
+      padding: "md",
+      gap: "md",
+    },
   },
 
   Grid: {
     props: z.object({
-      cols: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(6), z.literal(12)]).nullable().optional(),
+      cols: z
+        .union([
+          z.literal(1),
+          z.literal(2),
+          z.literal(3),
+          z.literal(4),
+          z.literal(6),
+          z.literal(12),
+        ])
+        .nullable()
+        .optional(),
       gap: z.enum(["none", "sm", "md", "lg"]).nullable().optional(),
     }),
     events: [],
@@ -61,7 +82,7 @@ export const customComponentDefinitions = {
     }),
     events: [],
     description:
-      "Dark card container. Wrap child elements inside. maxWidth: sm/md/lg/full (default full). centered: true for mx-auto.",
+      "Dark card container. For forms and dense content, add a Stack or Section as the immediate child and place controls inside that wrapper (avoid placing many inputs/buttons directly under Card). Don't use for content layout, use Section instead. maxWidth: sm/md/lg/full (default full). centered: true for mx-auto.",
     example: { title: "Revenue", description: "Monthly breakdown" },
   },
 
@@ -72,14 +93,18 @@ export const customComponentDefinitions = {
       level: z.enum(["h1", "h2", "h3", "h4"]).nullable().optional(),
     }),
     events: [],
-    description: "Section heading. level: h1 (4xl bold), h2 (3xl semibold, default), h3 (xl), h4 (base).",
+    description:
+      "Section heading. level: h1 (4xl bold), h2 (3xl semibold, default), h3 (xl), h4 (base).",
     example: { text: "Dashboard", level: "h1" },
   },
 
   Text: {
     props: z.object({
       text: z.string(),
-      variant: z.enum(["body", "caption", "muted", "lead", "code"]).nullable().optional(),
+      variant: z
+        .enum(["body", "caption", "muted", "lead", "code"])
+        .nullable()
+        .optional(),
     }),
     events: [],
     description:
@@ -90,7 +115,10 @@ export const customComponentDefinitions = {
   Badge: {
     props: z.object({
       text: z.string(),
-      variant: z.enum(["default", "success", "warning", "error", "secondary"]).nullable().optional(),
+      variant: z
+        .enum(["default", "success", "warning", "error", "secondary"])
+        .nullable()
+        .optional(),
     }),
     events: [],
     description:
@@ -102,11 +130,19 @@ export const customComponentDefinitions = {
     props: z.object({
       title: z.string(),
       message: z.string().nullable().optional(),
-      type: z.enum(["info", "success", "warning", "error"]).nullable().optional(),
+      type: z
+        .enum(["info", "success", "warning", "error"])
+        .nullable()
+        .optional(),
     }),
     events: [],
-    description: "Inline alert with icon and left border. type: info (default), success, warning, error.",
-    example: { title: "Saved", message: "Your changes have been saved.", type: "success" },
+    description:
+      "Inline alert with icon and left border. type: info (default), success, warning, error.",
+    example: {
+      title: "Saved",
+      message: "Your changes have been saved.",
+      type: "success",
+    },
   },
 
   // Feedback
@@ -116,7 +152,8 @@ export const customComponentDefinitions = {
       label: z.string().nullable().optional(),
     }),
     events: [],
-    description: "Animated loading spinner. size: sm/md (default)/lg. Optional text label alongside.",
+    description:
+      "Animated loading spinner. size: sm/md (default)/lg. Optional text label alongside.",
     example: { size: "md", label: "Loading…" },
   },
 
@@ -127,7 +164,8 @@ export const customComponentDefinitions = {
       label: z.string().nullable().optional(),
     }),
     events: [],
-    description: "Horizontal progress bar. value 0–max (default 100). Shows label + % when label provided.",
+    description:
+      "Horizontal progress bar. value 0–max (default 100). Shows label + % when label provided.",
     example: { value: 72, label: "Upload progress" },
   },
 
@@ -156,32 +194,59 @@ export const customComponentDefinitions = {
     events: [],
     description:
       "Metric card with large value, optional unit, trend badge (up/down/neutral), and description. Use trendValue for the badge text (e.g. '+12%').",
-    example: { label: "MRR", value: "24,800", unit: "$", trend: "up", trendValue: "+8%", description: "vs last month" },
+    example: {
+      label: "MRR",
+      value: "24,800",
+      unit: "$",
+      trend: "up",
+      trendValue: "+8%",
+      description: "vs last month",
+    },
   },
 
   BarChart: {
     props: z.object({
       title: z.string().nullable().optional(),
       data: z.array(z.object({ label: z.string(), value: z.number() })),
-      color: z.enum(["blue", "emerald", "violet", "amber", "rose"]).nullable().optional(),
+      color: z
+        .enum(["blue", "emerald", "violet", "amber", "rose"])
+        .nullable()
+        .optional(),
     }),
     events: [],
     description:
       "Vertical bar chart. data: [{label, value}]. color: blue (default)/emerald/violet/amber/rose.",
-    example: { title: "Monthly Sales", data: [{ label: "Jan", value: 420 }, { label: "Feb", value: 380 }], color: "blue" },
+    example: {
+      title: "Monthly Sales",
+      data: [
+        { label: "Jan", value: 420 },
+        { label: "Feb", value: 380 },
+      ],
+      color: "blue",
+    },
   },
 
   LineChart: {
     props: z.object({
       title: z.string().nullable().optional(),
       data: z.array(z.object({ label: z.string(), value: z.number() })),
-      color: z.enum(["blue", "emerald", "violet", "amber", "rose"]).nullable().optional(),
+      color: z
+        .enum(["blue", "emerald", "violet", "amber", "rose"])
+        .nullable()
+        .optional(),
       showArea: z.boolean().nullable().optional(),
     }),
     events: [],
     description:
       "Area/line chart. data: [{label, value}]. showArea: true (default) fills gradient under line. color: blue (default)/emerald/violet/amber/rose.",
-    example: { title: "Revenue Trend", data: [{ label: "Q1", value: 12000 }, { label: "Q2", value: 18500 }], color: "emerald" },
+    example: {
+      title: "Revenue Trend",
+      data: [
+        { label: "Q1", value: 12000 },
+        { label: "Q2", value: 18500 },
+      ],
+      color: "emerald",
+    },
   },
 
   // Form inputs
@@ -213,7 +278,12 @@ export const customComponentDefinitions = {
     events: ["submit", "focus", "blur"],
     description:
       "Text input with label. Use { $bindState } on value for two-way binding. Use checks for validation (e.g. required, email, minLength). validateOn controls timing (default: blur).",
-    example: { label: "Email", name: "email", type: "email", placeholder: "you@example.com" },
+    example: {
+      label: "Email",
+      name: "email",
+      type: "email",
+      placeholder: "you@example.com",
+    },
   },
 
   Textarea: {
@@ -272,7 +342,12 @@ export const customComponentDefinitions = {
     events: ["change"],
     description:
       "Dropdown select. options: string[]. Use { $bindState } on value for binding. placeholder shown when empty.",
-    example: { label: "Country", name: "country", options: ["USA", "UK", "Canada"], placeholder: "Select country…" },
+    example: {
+      label: "Country",
+      name: "country",
+      options: ["USA", "UK", "Canada"],
+      placeholder: "Select country…",
+    },
   },
 
   Switch: {

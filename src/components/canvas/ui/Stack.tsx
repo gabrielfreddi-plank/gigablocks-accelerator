@@ -6,49 +6,48 @@ import { cn } from "@/lib/utils";
 
 interface StackProps {
   direction?: "horizontal" | "vertical" | null;
-  gap?: "none" | "sm" | "md" | "lg" | null;
+  gap?: "none" | "sm" | "md" | "lg" | "xl" | null;
   align?: "start" | "center" | "end" | "stretch" | null;
-  justify?: "start" | "center" | "end" | "between" | null;
-  wrap?: boolean | null;
-  children?: React.ReactNode;
+  justify?: "start" | "center" | "end" | "between" | "around" | null;
 }
 
-const gapStyles: Record<string, string> = {
+const gapMap: Record<string, string> = {
   none: "gap-0",
-  sm:   "gap-2",
-  md:   "gap-4",
-  lg:   "gap-8",
+  sm: "gap-3",
+  md: "gap-6",
+  lg: "gap-10",
+  xl: "gap-16",
 };
 
-const alignStyles: Record<string, string> = {
-  start:   "items-start",
-  center:  "items-center",
-  end:     "items-end",
+const alignMap: Record<string, string> = {
+  start: "items-start",
+  center: "items-center",
+  end: "items-end",
   stretch: "items-stretch",
 };
 
-const justifyStyles: Record<string, string> = {
-  start:   "justify-start",
-  center:  "justify-center",
-  end:     "justify-end",
+const justifyMap: Record<string, string> = {
+  start: "",
+  center: "justify-center",
+  end: "justify-end",
   between: "justify-between",
+  around: "justify-around",
 };
 
 export function Stack({ props, children }: BaseComponentProps<StackProps>) {
-  const direction = props.direction ?? "vertical";
-  const gap       = props.gap       ?? "md";
-  const align     = props.align     ?? "stretch";
-  const justify   = props.justify   ?? "start";
+  const isHorizontal = props.direction === "horizontal";
+  const gapClass = gapMap[props.gap ?? "md"] ?? "gap-6";
+  const alignClass = alignMap[props.align ?? "start"] ?? "items-start";
+  const justifyClass = justifyMap[props.justify ?? "start"] ?? "";
 
   return (
     <div
       className={cn(
-        "flex w-full",
-        direction === "horizontal" ? "flex-row" : "flex-col",
-        gapStyles[gap]     ?? gapStyles.md,
-        alignStyles[align] ?? alignStyles.stretch,
-        justifyStyles[justify] ?? justifyStyles.start,
-        props.wrap && "flex-wrap",
+        "flex",
+        isHorizontal ? "flex-row flex-wrap" : "flex-col",
+        gapClass,
+        alignClass,
+        justifyClass,
       )}
     >
       {children}

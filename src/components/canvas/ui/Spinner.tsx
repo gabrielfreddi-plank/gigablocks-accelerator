@@ -9,7 +9,11 @@ interface SpinnerProps {
   label?: string | null;
 }
 
-const sizeStyles = { sm: "h-4 w-4 border-2", md: "h-6 w-6 border-2", lg: "h-8 w-8 border-[3px]" };
+const sizeStyles = {
+  sm: "h-4 w-4 border-2",
+  md: "h-6 w-6 border-2",
+  lg: "h-8 w-8 border-[3px]",
+};
 
 export function Spinner({ props }: BaseComponentProps<SpinnerProps>) {
   const size = props.size ?? "md";
@@ -22,7 +26,9 @@ export function Spinner({ props }: BaseComponentProps<SpinnerProps>) {
           sizeStyles[size] ?? sizeStyles.md,
         )}
       />
-      {props.label && <span className="text-sm text-zinc-500">{props.label}</span>}
+      {props.label && (
+        <span className="text-sm text-zinc-500">{props.label}</span>
+      )}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { runCanvasStream } from "@/lib/ai/application/runCanvasStream";
-import { canvasRequestSchema } from "@/lib/ai/contracts/canvasSchema";
+import { canvasRequestSchema, specSchema } from "@/lib/ai/contracts/canvasSchema";
 import { AnthropicChatModel } from "@/lib/ai/infrastructure/anthropicChatModel";
 
 import { componentCatalog } from "@/components/canvas/component-catalog";
@@ -25,6 +25,14 @@ REQUIRED STRUCTURE:
    - Omit "children" from props if the element has no children.
    - Use only component names listed in the catalog above.
    - Every key in "children" must be added as its own element in a later line.
+   - IMPORTANT LAYOUT RULE (GLOBAL): Do NOT place form controls or dense content directly under any container parent.
+   - For ANY parent component that groups other elements (e.g. Card, Section, Grid, Tabs content, Collapsible content), add a Stack or Section wrapper first.
+   - Then place inputs/buttons/text/charts/tables inside that wrapper instead of directly under the parent.
+   - Prefer Stack (direction="vertical", gap="md") as the default wrapper for grouped form fields/content.
+   - To bind events to actions, add an "on" field (sibling of type/props/children):
+     {"op":"add","path":"/elements/submit-btn","value":{"type":"Button","props":{"label":"Sign In","variant":"primary"},"on":{"press":{"action":"submit","params":{}}}}}
+   - For navigation buttons: use action "navigate" with params {"target":"<pageName>"}.
+   - IMPORTANT: "on" is a top-level field on the element — never inside "props".
 `.trim();
 
 export async function POST(request: NextRequest) {
@@ -48,9 +56,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const contextRecord =
+      parsed.data.context && typeof parsed.data.context === "object"
+        ? (parsed.data.context as Record<string, unknown>)
+        : null;
+
+    const currentSpecFromContext =
+      contextRecord?.currentSpec ?? contextRecord?.previousSpec;
+
+    const currentSpecParse = specSchema.safeParse(currentSpecFromContext);
+    const currentSpec = parsed.data.currentSpec ?? (currentSpecParse.success ? currentSpecParse.data : null);
+
     const stream = runCanvasStream({
       prompt: parsed.data.prompt,
-      currentSpec: parsed.data.currentSpec,
+      currentSpec,
       system: CANVAS_SYSTEM_PROMPT,
       chatModel: new AnthropicChatModel(apiKey),
     });

@@ -10,24 +10,38 @@ interface RadioProps {
   name: string;
   options: string[];
   value?: string | null;
-  checks?: Array<{ type: string; message: string; args?: Record<string, unknown> }> | null;
+  checks?: Array<{
+    type: string;
+    message: string;
+    args?: Record<string, unknown>;
+  }> | null;
   validateOn?: "change" | "blur" | "submit" | null;
 }
 
-export function Radio({ props, bindings, emit }: BaseComponentProps<RadioProps>) {
+export function Radio({
+  props,
+  bindings,
+  emit,
+}: BaseComponentProps<RadioProps>) {
   const options = (props.options ?? []).map((o) =>
     typeof o === "string" ? o : String(o ?? ""),
   );
 
-  const { value, setValue, errors, validate, hasValidation, resolvedValidateOn } =
-    useFormField<string>({
-      propValue: props.value,
-      bindingPath: bindings?.value,
-      defaultValue: options[0] ?? "",
-      checks: props.checks,
-      validateOn: props.validateOn,
-      defaultValidateOn: "change",
-    });
+  const {
+    value,
+    setValue,
+    errors,
+    validate,
+    hasValidation,
+    resolvedValidateOn,
+  } = useFormField<string>({
+    propValue: props.value,
+    bindingPath: bindings?.value,
+    defaultValue: options[0] ?? "",
+    checks: props.checks,
+    validateOn: props.validateOn,
+    defaultValidateOn: "change",
+  });
 
   const handleSelect = (option: string) => {
     setValue(option);
@@ -49,14 +63,21 @@ export function Radio({ props, bindings, emit }: BaseComponentProps<RadioProps>)
           const id = `${props.name}-${idx}`;
 
           return (
-            <label key={id} className="group flex cursor-pointer items-center gap-3 select-none">
+            <label
+              key={id}
+              className="group flex cursor-pointer items-center gap-3 select-none"
+            >
               <button
                 type="button"
                 role="radio"
                 aria-checked={isSelected}
                 id={id}
                 onClick={() => handleSelect(option)}
-                style={isSelected ? { boxShadow: "0 0 10px rgba(59,130,246,0.4)" } : undefined}
+                style={
+                  isSelected
+                    ? { boxShadow: "0 0 10px rgba(59,130,246,0.4)" }
+                    : undefined
+                }
                 className={cn(
                   "relative flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full",
                   "transition-all duration-150 ease-out",
@@ -69,20 +90,29 @@ export function Radio({ props, bindings, emit }: BaseComponentProps<RadioProps>)
                 <span
                   className={cn(
                     "block rounded-full bg-blue-500 transition-all duration-150 ease-out",
-                    isSelected ? "h-[7px] w-[7px] opacity-100" : "h-0 w-0 opacity-0",
+                    isSelected
+                      ? "h-[7px] w-[7px] opacity-100"
+                      : "h-0 w-0 opacity-0",
                   )}
                   style={
                     isSelected
-                      ? { animation: "canvas-dot-spring 0.22s cubic-bezier(0.34,1.56,0.64,1) forwards" }
+                      ? {
+                          animation:
+                            "canvas-dot-spring 0.22s cubic-bezier(0.34,1.56,0.64,1) forwards",
+                        }
                       : undefined
                   }
                 />
               </button>
 
-              <span className={cn(
-                "text-sm leading-none transition-colors duration-100",
-                isSelected ? "text-white" : "text-zinc-400 group-hover:text-zinc-300",
-              )}>
+              <span
+                className={cn(
+                  "text-sm leading-none transition-colors duration-100",
+                  isSelected
+                    ? "text-white"
+                    : "text-zinc-400 group-hover:text-zinc-300",
+                )}
+              >
                 {option}
               </span>
             </label>
@@ -90,9 +120,7 @@ export function Radio({ props, bindings, emit }: BaseComponentProps<RadioProps>)
         })}
       </div>
 
-      {errors.length > 0 && (
-        <p className="text-xs text-red-400">{errors[0]}</p>
-      )}
+      {errors.length > 0 && <p className="text-xs text-red-400">{errors[0]}</p>}
     </div>
   );
 }

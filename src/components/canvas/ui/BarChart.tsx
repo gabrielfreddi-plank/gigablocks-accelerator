@@ -20,11 +20,11 @@ interface BarChartProps {
 }
 
 const colorMap: Record<string, string> = {
-  blue:    "#3b82f6",
+  blue: "#3b82f6",
   emerald: "#10b981",
-  violet:  "#8b5cf6",
-  amber:   "#f59e0b",
-  rose:    "#f43f5e",
+  violet: "#8b5cf6",
+  amber: "#f59e0b",
+  rose: "#f43f5e",
 };
 
 const tooltipStyle = {
@@ -40,7 +40,10 @@ const tickStyle = { fill: "#52525b", fontSize: 11 };
 
 export function BarChart({ props }: BaseComponentProps<BarChartProps>) {
   const color = colorMap[props.color ?? "blue"] ?? colorMap.blue;
-  const chartData = (props.data ?? []).map((d) => ({ name: d.label, value: d.value }));
+  const chartData = (props.data ?? []).map((d) => ({
+    name: d.label,
+    value: d.value,
+  }));
 
   return (
     <div className="flex flex-col gap-3">
@@ -49,24 +52,32 @@ export function BarChart({ props }: BaseComponentProps<BarChartProps>) {
       )}
       <div className="w-full">
         <ResponsiveContainer width="100%" height={props.title ? 176 : 192}>
-          <RechartsBarChart data={chartData} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+          <RechartsBarChart
+            data={chartData}
+            margin={{ top: 4, right: 4, left: -16, bottom: 0 }}
+          >
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke="rgba(255,255,255,0.05)"
+              vertical={false}
+            />
             <XAxis
               dataKey="name"
               tick={tickStyle}
               axisLine={false}
               tickLine={false}
             />
-            <YAxis
-              tick={tickStyle}
-              axisLine={false}
-              tickLine={false}
-            />
+            <YAxis tick={tickStyle} axisLine={false} tickLine={false} />
             <Tooltip
               contentStyle={tooltipStyle}
               cursor={{ fill: "rgba(255,255,255,0.03)" }}
             />
-            <Bar dataKey="value" fill={color} radius={[4, 4, 0, 0]} maxBarSize={48} />
+            <Bar
+              dataKey="value"
+              fill={color}
+              radius={[4, 4, 0, 0]}
+              maxBarSize={48}
+            />
           </RechartsBarChart>
         </ResponsiveContainer>
       </div>

@@ -1,7 +1,15 @@
 "use client";
 
-import { useState } from "react";
-import { Loader2, Sparkles, Wand2 } from "lucide-react";
+import { useRef, useState } from "react";
+import {
+  BarChart2,
+  FormInput,
+  Loader2,
+  Search,
+  Sparkles,
+  Wand2,
+  X,
+} from "lucide-react";
 import {
   Renderer,
   StateProvider,
@@ -13,10 +21,29 @@ import {
 import { componentRegistry } from "./component-registry";
 import { cn } from "@/lib/utils";
 
+const TEMPLATES = [
+  {
+    label: "Sales Dashboard",
+    Icon: BarChart2,
+    prompt:
+      "Build a sales dashboard with KPI cards for MRR ($24.8k, +8%), ARR ($297k, +12%), and churn rate (2.1%, down). Add a bar chart for monthly revenue (Jan–Jun), a line chart for revenue trend over the same period, and a top products table with name, units sold, and revenue columns.",
+  },
+  {
+    label: "Onboarding Form",
+    Icon: FormInput,
+    prompt:
+      "Build a user onboarding form. Start with a welcome heading and a description. Add name (text) and email (email) inputs with validation. Add a role selector (Developer, Designer, Manager, Other) and a company size selector (1–10, 11–50, 51–200, 200+). Finish with a primary 'Get Started' submit button.",
+  },
+  {
+    label: "Data Explorer",
+    Icon: Search,
+    prompt:
+      "Build a data exploration tool. Include a text input for natural language queries and a Generate button. Show 3 KPI cards (Total Records, Avg Value, Anomalies). Below add a bar chart and a line chart with sample data. At the bottom a table showing sample rows.",
+  },
+] as const;
+
 function SkeletonBlock({ className }: { className?: string }) {
-  return (
-    <div className={cn("rounded-xl bg-zinc-800/70", className)} />
-  );
+  return <div className={cn("rounded-xl bg-zinc-800/70", className)} />;
 }
 
 function SkeletonPreview() {
@@ -41,13 +68,46 @@ function SkeletonPreview() {
 }
 
 export function CanvasInterface() {
-  const { spec, isStreaming, send } = useUIStream({ api: "/api/canvas" });
+  const { spec, isStreaming, error, send, clear } = useUIStream({
+    api: "/api/canvas",
+  });
   const [prompt, setPrompt] = useState("");
+  const specRef = useRef(spec);
+  specRef.current = spec;
+
+  const doSend = (text: string) => {
+    if (!text.trim() || isStreaming) return;
+    const context = specRef.current
+      ? { previousSpec: specRef.current }
+      : undefined;
+    send(text, context);
+  };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!prompt.trim() || isStreaming) return;
-    send(prompt);
+    doSend(prompt);
+    setPrompt("");
+  };
+
+  const handleTemplate = (templatePrompt: string) => {
+    setPrompt(templatePrompt);
+    // Start fresh — templates always generate new interface
+    send(templatePrompt);
+  };
+
+  const handleFormSubmit = (params: unknown) => {
+    console.log("Form submitted:", params);
+    const paramsStr =
+      params && typeof params === "object"
+        ? Object.entries(params as Record<string, unknown>)
+            .map(([k, v]) => `${k}: ${String(v)}`)
+            .join(", ")
+        : String(params);
+
+    send(
+      `The user submitted the form with the following values: ${paramsStr}. Generate a confirmation or next-step page that acknowledges their input and moves the flow forward.`,
+      { previousSpec: specRef.current ?? undefined },
+    );
   };
 
   const hasSpec = spec != null;
@@ -55,7 +115,7 @@ export function CanvasInterface() {
 
   return (
     <div className="flex h-[calc(100vh-69px)] w-full overflow-hidden">
-      {/* Left panel — prompt */}
+      {/* Left panel */}
       <aside className="flex w-[340px] shrink-0 flex-col gap-6 border-r border-zinc-800 bg-zinc-950 p-6">
         <div>
           <div className="flex items-center gap-2">
@@ -67,14 +127,42 @@ export function CanvasInterface() {
           </p>
         </div>
 
+        {/* Templates */}
+        <div className="flex flex-col gap-2">
+          <label className="text-xs font-medium uppercase tracking-widest text-zinc-500">
+            Templates
+          </label>
+          {TEMPLATES.map(({ label, Icon, prompt: templatePrompt }) => (
+            <button
+              key={label}
+              type="button"
+              disabled={isStreaming}
+              onClick={() => handleTemplate(templatePrompt)}
+              className={cn(
+                "flex items-center gap-2.5 rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2.5",
+                "text-left text-sm text-zinc-300 transition-colors duration-150",
+                "hover:border-zinc-700 hover:bg-zinc-800 hover:text-white",
+                "disabled:cursor-not-allowed disabled:opacity-50",
+              )}
+            >
+              <Icon className="h-4 w-4 shrink-0 text-blue-400" />
+              {label}
+            </button>
+          ))}
+        </div>
+
         <form onSubmit={handleSubmit} className="flex flex-1 flex-col gap-3">
           <label className="text-xs font-medium uppercase tracking-widest text-zinc-500">
-            Prompt
+            {hasSpec ? "Refine or extend" : "Prompt"}
           </label>
           <textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            placeholder="Describe the interface you want to create…"
+            placeholder={
+              hasSpec
+                ? "Describe what to change or add…"
+                : "Describe the interface you want to create…"
+            }
             disabled={isStreaming}
             className={cn(
               "flex-1 resize-none rounded-xl border border-zinc-800 bg-zinc-900",
@@ -84,33 +172,64 @@ export function CanvasInterface() {
               "disabled:cursor-not-allowed disabled:opacity-50",
             )}
           />
-          <button
-            type="submit"
-            disabled={isStreaming || !prompt.trim()}
-            className={cn(
-              "flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-medium",
-              "bg-blue-600 text-white transition-all duration-150",
-              "hover:bg-blue-500 active:scale-[0.98]",
-              "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-zinc-950",
-              "disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-blue-600",
+
+          <div className="flex gap-2">
+            {hasSpec && !isStreaming && (
+              <button
+                type="button"
+                onClick={() => {
+                  clear();
+                  setPrompt("");
+                }}
+                className={cn(
+                  "flex items-center justify-center gap-1.5 rounded-xl border border-zinc-700 px-3 py-2.5",
+                  "text-sm font-medium text-zinc-400 transition-all duration-150",
+                  "hover:border-zinc-600 hover:text-zinc-200",
+                  "focus:outline-none focus:ring-2 focus:ring-zinc-600",
+                )}
+              >
+                <X className="h-4 w-4" />
+                Clear
+              </button>
             )}
-          >
-            {isStreaming ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Generating…
-              </>
-            ) : (
-              <>
-                <Sparkles className="h-4 w-4" />
-                Generate
-              </>
-            )}
-          </button>
+
+            <button
+              type="submit"
+              disabled={isStreaming || !prompt.trim()}
+              className={cn(
+                "flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-medium",
+                "bg-blue-600 text-white transition-all duration-150",
+                "hover:bg-blue-500 active:scale-[0.98]",
+                "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-zinc-950",
+                "disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-blue-600",
+              )}
+            >
+              {isStreaming ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Generating…
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4" />
+                  {hasSpec ? "Update" : "Generate"}
+                </>
+              )}
+            </button>
+          </div>
         </form>
+
+        {error && (
+          <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3">
+            <p className="text-xs font-medium text-red-400">
+              Generation failed
+            </p>
+            <p className="mt-1 text-xs text-red-400/80">{error.message}</p>
+          </div>
+        )}
       </aside>
 
-      {/* Right panel — rendered output */}
+      {/* Right panel */}
       <main className="flex-1 overflow-y-auto bg-zinc-950">
         {showSkeleton ? (
           <SkeletonPreview />
@@ -120,8 +239,17 @@ export function CanvasInterface() {
               <VisibilityProvider>
                 <ActionProvider
                   handlers={{
-                    submit: (params) => console.log("Submit:", params),
-                    navigate: (params) => console.log("Navigate:", params),
+                    submit: (params) => handleFormSubmit(params),
+                    navigate: (params) => {
+                      const target = (params as Record<string, unknown>)
+                        ?.target;
+                      if (typeof target === "string") {
+                        send(
+                          `Navigate to: ${target}. Generate the corresponding page.`,
+                          { previousSpec: specRef.current ?? undefined },
+                        );
+                      }
+                    },
                   }}
                 >
                   <ValidationProvider customFunctions={{}}>
@@ -146,7 +274,7 @@ export function CanvasInterface() {
                   No interface yet
                 </p>
                 <p className="mt-0.5 text-xs text-zinc-600">
-                  Write a prompt and click Generate to get started
+                  Pick a template or write a prompt to get started
                 </p>
               </div>
             </div>

@@ -19,7 +19,9 @@ export function Progress({ props }: BaseComponentProps<ProgressProps>) {
       {props.label && (
         <div className="flex items-center justify-between">
           <span className="text-xs text-zinc-500">{props.label}</span>
-          <span className="text-xs font-medium text-zinc-400 tabular-nums">{Math.round(pct)}%</span>
+          <span className="text-xs font-medium text-zinc-400 tabular-nums">
+            {Math.round(pct)}%
+          </span>
         </div>
       )}
       <div className="h-1.5 w-full overflow-hidden rounded-full bg-zinc-800/80">

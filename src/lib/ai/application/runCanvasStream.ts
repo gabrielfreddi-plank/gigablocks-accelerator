@@ -10,20 +10,63 @@ export function runCanvasStream(params: {
   chatModel: ChatModelPort;
 }): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
+  const allowedOps = new Set([
+    "add",
+    "remove",
+    "replace",
+    "move",
+    "copy",
+    "test",
+  ]);
+
+  const enqueueIfValidPatchLine = (
+    controller: ReadableStreamDefaultController<Uint8Array>,
+    line: string,
+  ) => {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("```")) return;
+
+    try {
+      const parsed = JSON.parse(trimmed) as { op?: unknown; path?: unknown };
+      if (
+        typeof parsed === "object" &&
+        parsed !== null &&
+        typeof parsed.op === "string" &&
+        allowedOps.has(parsed.op) &&
+        typeof parsed.path === "string"
+      ) {
+        controller.enqueue(encoder.encode(JSON.stringify(parsed) + "\n"));
+      }
+    } catch {
+      // Ignore non-JSON/prose lines and keep only valid NDJSON patches.
+    }
+  };
 
   return new ReadableStream({
     async start(controller) {
       try {
-        // Clear stale elements from the previous spec before new patches arrive.
-        for (const key of Object.keys(params.currentSpec?.elements ?? {})) {
-          const patch = { op: "remove", path: `/elements/${key}` };
-          controller.enqueue(encoder.encode(JSON.stringify(patch) + "\n"));
-        }
-
         let lineBuffer = "";
 
+        const userContent = params.currentSpec
+          ? [
+              "You are UPDATING an existing UI. Output ONLY valid NDJSON patches — no prose, no questions, no markdown.",
+              "If the request is ambiguous, make reasonable assumptions and generate the UI anyway.",
+              "Prefer targeted updates (replace/add/remove only what is needed). Do not rebuild unrelated sections.",
+              "",
+              `Current UI elements: ${Object.entries(
+                params.currentSpec.elements,
+              )
+                .map(([k, v]) => `${k} (${(v as { type: string }).type})`)
+                .join(", ")}`,
+              "",
+              `Current UI spec JSON: ${JSON.stringify(params.currentSpec)}`,
+              "",
+              `User request: ${params.prompt}`,
+            ].join("\n")
+          : params.prompt;
+
         const messages: MessageParam[] = [
-          { role: "user", content: params.prompt },
+          { role: "user", content: userContent },
         ];
 
         await params.chatModel.stream({
@@ -36,17 +79,12 @@ export function runCanvasStream(params: {
             lineBuffer = lines.pop() ?? "";
 
             for (const line of lines) {
-              const trimmed = line.trim();
-              if (trimmed) {
-                controller.enqueue(encoder.encode(trimmed + "\n"));
-              }
+              enqueueIfValidPatchLine(controller, line);
             }
           },
         });
 
-        if (lineBuffer.trim()) {
-          controller.enqueue(encoder.encode(lineBuffer.trim() + "\n"));
-        }
+        enqueueIfValidPatchLine(controller, lineBuffer);
 
         controller.close();
       } catch (err) {

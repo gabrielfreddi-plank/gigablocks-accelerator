@@ -13,7 +13,11 @@ interface SliderProps {
   value?: number | null;
 }
 
-export function Slider({ props, bindings, emit }: BaseComponentProps<SliderProps>) {
+export function Slider({
+  props,
+  bindings,
+  emit,
+}: BaseComponentProps<SliderProps>) {
   const min = props.min ?? 0;
   const max = props.max ?? 100;
 
@@ -33,8 +37,12 @@ export function Slider({ props, bindings, emit }: BaseComponentProps<SliderProps
     <div className="flex flex-col gap-2.5">
       {props.label && (
         <div className="flex items-center justify-between">
-          <span className="text-xs font-medium text-zinc-500 uppercase tracking-wide">{props.label}</span>
-          <span className="text-xs font-medium text-zinc-400 tabular-nums">{numValue}</span>
+          <span className="text-xs font-medium text-zinc-500 uppercase tracking-wide">
+            {props.label}
+          </span>
+          <span className="text-xs font-medium text-zinc-400 tabular-nums">
+            {numValue}
+          </span>
         </div>
       )}
 

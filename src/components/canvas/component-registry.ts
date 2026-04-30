@@ -28,6 +28,14 @@ import { Textarea } from "./ui/Textarea";
 export const { registry: componentRegistry } = defineRegistry(
   componentCatalog,
   {
+    actions: {
+      navigate: async () => {
+        // Runtime action handlers are provided by ActionProvider in CanvasInterface.
+      },
+      submit: async () => {
+        // Runtime action handlers are provided by ActionProvider in CanvasInterface.
+      },
+    },
     components: {
       // Layout
       Section,

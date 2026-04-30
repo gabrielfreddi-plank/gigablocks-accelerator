@@ -15,9 +15,18 @@ interface KpiCardProps {
 }
 
 const trendConfig = {
-  up:      { icon: TrendingUp,   classes: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20" },
-  down:    { icon: TrendingDown, classes: "text-red-400 bg-red-500/10 border-red-500/20"             },
-  neutral: { icon: Minus,        classes: "text-zinc-400 bg-zinc-800 border-white/10"                },
+  up: {
+    icon: TrendingUp,
+    classes: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+  },
+  down: {
+    icon: TrendingDown,
+    classes: "text-red-400 bg-red-500/10 border-red-500/20",
+  },
+  neutral: {
+    icon: Minus,
+    classes: "text-zinc-400 bg-zinc-800 border-white/10",
+  },
 };
 
 export function KpiCard({ props }: BaseComponentProps<KpiCardProps>) {
@@ -35,13 +44,20 @@ export function KpiCard({ props }: BaseComponentProps<KpiCardProps>) {
           {props.value}
         </span>
         {props.unit && (
-          <span className="text-lg text-zinc-500 leading-none">{props.unit}</span>
+          <span className="text-lg text-zinc-500 leading-none">
+            {props.unit}
+          </span>
         )}
       </div>
 
       <div className="flex items-center gap-2">
         {config && props.trendValue && (
-          <span className={cn("inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium", config.classes)}>
+          <span
+            className={cn(
+              "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium",
+              config.classes,
+            )}
+          >
             <config.icon className="h-3 w-3" />
             {props.trendValue}
           </span>

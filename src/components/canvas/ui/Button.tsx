@@ -60,22 +60,26 @@ export function Button({ props, emit }: BaseComponentProps<ButtonProps>) {
         "disabled:pointer-events-none disabled:opacity-35",
         sizeStyles[size] ?? sizeStyles.md,
         props.fullWidth ? "w-full" : "",
-        variant === "primary" && cn(
-          "bg-blue-600 text-white border border-blue-500/40",
-          "hover:bg-blue-500 active:bg-blue-700",
-        ),
-        variant === "secondary" && cn(
-          "bg-transparent text-zinc-200 border border-white/15",
-          "hover:bg-white/5 hover:border-white/25 active:bg-white/8",
-        ),
-        variant === "ghost" && cn(
-          "bg-transparent text-zinc-400 border border-transparent",
-          "hover:bg-white/5 hover:text-zinc-200 active:bg-white/8",
-        ),
-        variant === "danger" && cn(
-          "bg-red-700 text-white border border-red-600/40",
-          "hover:bg-red-600 active:bg-red-800",
-        ),
+        variant === "primary" &&
+          cn(
+            "bg-blue-600 text-white border border-blue-500/40",
+            "hover:bg-blue-500 active:bg-blue-700",
+          ),
+        variant === "secondary" &&
+          cn(
+            "bg-transparent text-zinc-200 border border-white/15",
+            "hover:bg-white/5 hover:border-white/25 active:bg-white/8",
+          ),
+        variant === "ghost" &&
+          cn(
+            "bg-transparent text-zinc-400 border border-transparent",
+            "hover:bg-white/5 hover:text-zinc-200 active:bg-white/8",
+          ),
+        variant === "danger" &&
+          cn(
+            "bg-red-700 text-white border border-red-600/40",
+            "hover:bg-red-600 active:bg-red-800",
+          ),
       )}
     >
       {props.label}

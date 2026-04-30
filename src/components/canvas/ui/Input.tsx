@@ -12,26 +12,43 @@ interface InputProps {
   placeholder?: string | null;
   value?: string | null;
   hint?: string | null;
-  checks?: Array<{ type: string; message: string; args?: Record<string, unknown> }> | null;
+  checks?: Array<{
+    type: string;
+    message: string;
+    args?: Record<string, unknown>;
+  }> | null;
   validateOn?: "change" | "blur" | "submit" | null;
 }
 
-export function Input({ props, bindings, emit }: BaseComponentProps<InputProps>) {
-  const { value, setValue, errors, validate, hasValidation, resolvedValidateOn } =
-    useFormField<string>({
-      propValue: props.value,
-      bindingPath: bindings?.value,
-      defaultValue: "",
-      checks: props.checks,
-      validateOn: props.validateOn,
-      defaultValidateOn: "blur",
-    });
+export function Input({
+  props,
+  bindings,
+  emit,
+}: BaseComponentProps<InputProps>) {
+  const {
+    value,
+    setValue,
+    errors,
+    validate,
+    hasValidation,
+    resolvedValidateOn,
+  } = useFormField<string>({
+    propValue: props.value,
+    bindingPath: bindings?.value,
+    defaultValue: "",
+    checks: props.checks,
+    validateOn: props.validateOn,
+    defaultValidateOn: "blur",
+  });
 
   const hasError = errors.length > 0;
 
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={props.name} className="text-xs font-medium text-zinc-500 tracking-wide uppercase">
+      <label
+        htmlFor={props.name}
+        className="text-xs font-medium text-zinc-500 tracking-wide uppercase"
+      >
         {props.label}
       </label>
 
