@@ -2,31 +2,49 @@ import { defineCatalog } from "@json-render/core";
 import { schema } from "@json-render/react/schema";
 import { shadcnComponentDefinitions } from "@json-render/shadcn/catalog";
 
+import { customComponentDefinitions } from "./ui/catalog";
+
 export const componentCatalog = defineCatalog(schema, {
   components: {
-    Card: shadcnComponentDefinitions.Card,
+    // Layout
+    Card: customComponentDefinitions.Card,
+    Grid: customComponentDefinitions.Grid,
     Stack: shadcnComponentDefinitions.Stack,
     Separator: shadcnComponentDefinitions.Separator,
-    Grid: shadcnComponentDefinitions.Grid,
 
+    // Navigation
     Accordion: shadcnComponentDefinitions.Accordion,
     Collapsible: shadcnComponentDefinitions.Collapsible,
     Tabs: shadcnComponentDefinitions.Tabs,
 
-    Heading: shadcnComponentDefinitions.Heading,
-    Text: shadcnComponentDefinitions.Text,
+    // Content
+    Heading: customComponentDefinitions.Heading,
+    Text: customComponentDefinitions.Text,
+    Badge: customComponentDefinitions.Badge,
     Table: shadcnComponentDefinitions.Table,
 
-    Skeleton: shadcnComponentDefinitions.Skeleton,
-    Spinner: shadcnComponentDefinitions.Spinner,
+    // Feedback
+    Alert: customComponentDefinitions.Alert,
+    Skeleton: customComponentDefinitions.Skeleton,
+    Spinner: customComponentDefinitions.Spinner,
+    Progress: customComponentDefinitions.Progress,
 
-    Button: shadcnComponentDefinitions.Button,
-    Input: shadcnComponentDefinitions.Input,
-    Textarea: shadcnComponentDefinitions.Textarea,
-    Select: shadcnComponentDefinitions.Select,
-    Checkbox: shadcnComponentDefinitions.Checkbox,
-    Radio: shadcnComponentDefinitions.Radio,
-    Switch: shadcnComponentDefinitions.Switch,
+    // Charts & KPIs
+    KpiCard: customComponentDefinitions.KpiCard,
+    BarChart: customComponentDefinitions.BarChart,
+    LineChart: customComponentDefinitions.LineChart,
+
+    // Form inputs — custom implementations
+    Button: customComponentDefinitions.Button,
+    Input: customComponentDefinitions.Input,
+    Textarea: customComponentDefinitions.Textarea,
+    Checkbox: customComponentDefinitions.Checkbox,
+    Radio: customComponentDefinitions.Radio,
+    Select: customComponentDefinitions.Select,
+    Switch: customComponentDefinitions.Switch,
+    Slider: customComponentDefinitions.Slider,
+
+    // Navigation inputs — shadcn
     Toggle: shadcnComponentDefinitions.Toggle,
     ToggleGroup: shadcnComponentDefinitions.ToggleGroup,
   },

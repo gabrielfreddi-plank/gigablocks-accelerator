@@ -1,34 +1,71 @@
 import { defineRegistry } from "@json-render/react";
 import { shadcnComponents } from "@json-render/shadcn";
+
 import { componentCatalog } from "./component-catalog";
+import { Alert } from "./ui/Alert";
+import { Badge } from "./ui/Badge";
+import { BarChart } from "./ui/BarChart";
+import { Button } from "./ui/Button";
+import { Card } from "./ui/Card";
+import { Grid } from "./ui/Grid";
+import { Checkbox } from "./ui/Checkbox";
+import { Heading } from "./ui/Heading";
+import { Input } from "./ui/Input";
+import { KpiCard } from "./ui/KpiCard";
+import { LineChart } from "./ui/LineChart";
+import { Progress } from "./ui/Progress";
+import { Radio } from "./ui/Radio";
+import { Select } from "./ui/Select";
+import { Skeleton } from "./ui/Skeleton";
+import { Slider } from "./ui/Slider";
+import { Spinner } from "./ui/Spinner";
+import { Switch } from "./ui/Switch";
+import { Text } from "./ui/Text";
+import { Textarea } from "./ui/Textarea";
 
 export const { registry: componentRegistry } = defineRegistry(
   componentCatalog,
   {
     components: {
-      Card: shadcnComponents.Card,
+      // Layout
+      Card,
+      Grid,
       Stack: shadcnComponents.Stack,
       Separator: shadcnComponents.Separator,
-      Grid: shadcnComponents.Grid,
 
+      // Navigation
       Accordion: shadcnComponents.Accordion,
       Collapsible: shadcnComponents.Collapsible,
       Tabs: shadcnComponents.Tabs,
 
-      Heading: shadcnComponents.Heading,
-      Text: shadcnComponents.Text,
+      // Content
+      Heading,
+      Text,
+      Badge,
       Table: shadcnComponents.Table,
 
-      Skeleton: shadcnComponents.Skeleton,
-      Spinner: shadcnComponents.Spinner,
+      // Feedback
+      Alert,
+      Skeleton,
+      Spinner,
+      Progress,
 
-      Button: shadcnComponents.Button,
-      Input: shadcnComponents.Input,
-      Textarea: shadcnComponents.Textarea,
-      Select: shadcnComponents.Select,
-      Checkbox: shadcnComponents.Checkbox,
-      Radio: shadcnComponents.Radio,
-      Switch: shadcnComponents.Switch,
+      // Charts & KPIs
+      KpiCard,
+      BarChart,
+      LineChart,
+
+      // Form inputs — custom implementations
+      Button,
+      Input,
+      Textarea,
+      Checkbox,
+      Radio,
+      Select,
+      Switch,
+      Slider,
+
+      // Navigation inputs — shadcn
       Toggle: shadcnComponents.Toggle,
       ToggleGroup: shadcnComponents.ToggleGroup,
     },
