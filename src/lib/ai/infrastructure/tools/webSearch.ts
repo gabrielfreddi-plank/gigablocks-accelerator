@@ -63,7 +63,7 @@ export const webSearchTool: ToolDefinition = {
     const { query, maxResults, country, startDate, endDate } =
       inputSchema.parse(input);
     const apiKey = process.env.TAVILY_API_KEY;
-    if (!apiKey) throw new Error("TAVILY_API_KEY is not set");
+    if (!apiKey) throw new Error("Tool is currently unavailable");
 
     const client = tavily({ apiKey });
     const response = await client.search(query, {
