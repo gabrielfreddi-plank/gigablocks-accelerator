@@ -30,6 +30,7 @@ export async function POST(request: NextRequest) {
       messages: parsedBody.data.messages,
       chatModel: new AnthropicChatModel(apiKey),
       toolRegistry: new ToolRegistry(),
+      system: "You're a helpful assistant, that answers directly and shortly.",
     });
 
     return createUIMessageStreamResponse({ stream });

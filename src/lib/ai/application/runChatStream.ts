@@ -57,6 +57,7 @@ export function runChatStream(params: {
   messages: ChatMessage[];
   chatModel: ChatModelPort;
   toolRegistry: ToolRegistryPort;
+  system?: string;
 }) {
   const anthropicMessages = toAnthropicMessages(params.messages);
   const tools = params.toolRegistry.getDefinitions().map((tool) => ({
@@ -73,6 +74,7 @@ export function runChatStream(params: {
         const finalMessage = await params.chatModel.stream({
           messages: anthropicMessages,
           tools,
+          system: params.system,
           onTextDelta: (delta) => {
             if (!activeTextId) {
               activeTextId = crypto.randomUUID();
@@ -212,6 +214,9 @@ export function runChatStream(params: {
         errorText: "Maximum tool-call steps exceeded",
       });
     },
-    onError: () => "Streaming failed",
+    onError: (e) => {
+      console.error(e);
+      return "Streaming failed";
+    },
   });
 }

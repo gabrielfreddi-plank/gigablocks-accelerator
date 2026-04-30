@@ -7,6 +7,7 @@ import type {
 export interface ChatModelStreamParams {
   messages: MessageParam[];
   tools: Tool[];
+  system?: string;
   onTextDelta: (delta: string) => void;
 }
 

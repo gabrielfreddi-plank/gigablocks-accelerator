@@ -7,7 +7,7 @@ import type {
 
 import type { ChatModelPort } from "@/lib/ai/ports/chatModel";
 
-const DEFAULT_MODEL = "claude-sonnet-4-5";
+const DEFAULT_MODEL = "claude-haiku-4-5";
 
 export class AnthropicChatModel implements ChatModelPort {
   private readonly client: Anthropic;
@@ -26,6 +26,7 @@ export class AnthropicChatModel implements ChatModelPort {
       max_tokens: 2048,
       messages: params.messages,
       tools: params.tools,
+      ...(params.system ? { system: params.system } : {}),
     });
 
     stream.on("text", (textDelta) => {
