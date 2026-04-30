@@ -47,8 +47,8 @@ export function BarChart({ props }: BaseComponentProps<BarChartProps>) {
       {props.title && (
         <p className="text-sm font-medium text-zinc-300">{props.title}</p>
       )}
-      <div className={cn("w-full", props.title ? "h-44" : "h-48")}>
-        <ResponsiveContainer width="100%" height="100%">
+      <div className="w-full">
+        <ResponsiveContainer width="100%" height={props.title ? 176 : 192}>
           <RechartsBarChart data={chartData} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
             <XAxis

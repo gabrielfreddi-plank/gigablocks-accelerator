@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 
 interface GridProps {
   cols?: 1 | 2 | 3 | 4 | 6 | 12 | null;
-  gap?: "none" | "sm" | "md" | "lg" | null;
+  gap?: string | null;
   children?: React.ReactNode;
 }
 

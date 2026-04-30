@@ -14,6 +14,33 @@ const validateOnSchema = z.enum(["change", "blur", "submit"]).nullable();
 
 export const customComponentDefinitions = {
   // Layout
+  Stack: {
+    props: z.object({
+      direction: z.enum(["horizontal", "vertical"]).nullable().optional(),
+      gap: z.enum(["none", "sm", "md", "lg"]).nullable().optional(),
+      align: z.enum(["start", "center", "end", "stretch"]).nullable().optional(),
+      justify: z.enum(["start", "center", "end", "between"]).nullable().optional(),
+      wrap: z.boolean().nullable().optional(),
+    }),
+    events: [],
+    description:
+      "Flex container, full width. direction: vertical (default)/horizontal. gap: none/sm/md (default)/lg. align: start/center/end/stretch (default). justify: start (default)/center/end/between.",
+    example: { direction: "horizontal", gap: "md", align: "center" },
+  },
+
+  Section: {
+    props: z.object({
+      title: z.string().nullable().optional(),
+      description: z.string().nullable().optional(),
+      padding: z.enum(["none", "sm", "md", "lg"]).nullable().optional(),
+      divider: z.boolean().nullable().optional(),
+    }),
+    events: [],
+    description:
+      "Full-width semantic section container. Use instead of Card for page sections, navbar areas, content blocks. title/description render as a section header. padding: none/sm/md (default)/lg. divider: true adds a bottom border.",
+    example: { title: "Overview", description: "Summary of recent activity", padding: "md" },
+  },
+
   Grid: {
     props: z.object({
       cols: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(6), z.literal(12)]).nullable().optional(),

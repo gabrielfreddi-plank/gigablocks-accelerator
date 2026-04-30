@@ -15,10 +15,12 @@ import { KpiCard } from "./ui/KpiCard";
 import { LineChart } from "./ui/LineChart";
 import { Progress } from "./ui/Progress";
 import { Radio } from "./ui/Radio";
+import { Section } from "./ui/Section";
 import { Select } from "./ui/Select";
 import { Skeleton } from "./ui/Skeleton";
 import { Slider } from "./ui/Slider";
 import { Spinner } from "./ui/Spinner";
+import { Stack } from "./ui/Stack";
 import { Switch } from "./ui/Switch";
 import { Text } from "./ui/Text";
 import { Textarea } from "./ui/Textarea";
@@ -28,9 +30,10 @@ export const { registry: componentRegistry } = defineRegistry(
   {
     components: {
       // Layout
+      Section,
       Card,
       Grid,
-      Stack: shadcnComponents.Stack,
+      Stack,
       Separator: shadcnComponents.Separator,
 
       // Navigation

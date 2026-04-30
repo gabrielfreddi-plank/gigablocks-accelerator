@@ -7,9 +7,10 @@ import { customComponentDefinitions } from "./ui/catalog";
 export const componentCatalog = defineCatalog(schema, {
   components: {
     // Layout
+    Section: customComponentDefinitions.Section,
     Card: customComponentDefinitions.Card,
     Grid: customComponentDefinitions.Grid,
-    Stack: shadcnComponentDefinitions.Stack,
+    Stack: customComponentDefinitions.Stack,
     Separator: shadcnComponentDefinitions.Separator,
 
     // Navigation
