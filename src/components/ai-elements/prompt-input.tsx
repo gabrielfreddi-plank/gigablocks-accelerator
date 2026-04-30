@@ -1224,6 +1224,9 @@ export const PromptInputSubmit = ({
   ...props
 }: PromptInputSubmitProps) => {
   const isGenerating = status === "submitted" || status === "streaming";
+  type SubmitClickEvent = Parameters<
+    NonNullable<PromptInputSubmitProps["onClick"]>
+  >[0];
 
   let Icon = <CornerDownLeftIcon className="size-4" />;
 
@@ -1236,7 +1239,7 @@ export const PromptInputSubmit = ({
   }
 
   const handleClick = useCallback(
-    (e: React.MouseEvent<HTMLButtonElement>) => {
+    (e: SubmitClickEvent) => {
       if (isGenerating && onStop) {
         e.preventDefault();
         onStop();
