@@ -31,9 +31,11 @@ import {
   PromptInputTools,
   type PromptInputMessage,
 } from "@/components/ai-elements/prompt-input";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import {
+  BrainIcon,
   MessageSquareIcon,
   PencilIcon,
   PlusIcon,
@@ -329,6 +331,16 @@ export function ChatInterface() {
               </div>
             );
           })}
+        </div>
+
+        <div className="mt-3 border-t border-zinc-800 pt-3">
+          <Link
+            href="/settings/memories"
+            className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 transition-colors"
+          >
+            <BrainIcon className="size-4" />
+            Memories
+          </Link>
         </div>
       </aside>
 
