@@ -33,7 +33,12 @@ import {
 } from "@/components/ai-elements/prompt-input";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { MessageSquareIcon, PencilIcon, PlusIcon, TrashIcon } from "lucide-react";
+import {
+  MessageSquareIcon,
+  PencilIcon,
+  PlusIcon,
+  TrashIcon,
+} from "lucide-react";
 import {
   createChatSession,
   createDefaultChatSession,
@@ -71,13 +76,12 @@ export function ChatInterface() {
     stop,
     error,
     regenerate,
-  } =
-    useChat<UIMessage>({
-      id: chatState.selectedSessionId ?? undefined,
-      transport: new DefaultChatTransport({
-        api: "/api/chat",
-      }),
-    });
+  } = useChat<UIMessage>({
+    id: chatState.selectedSessionId ?? undefined,
+    transport: new DefaultChatTransport({
+      api: "/api/chat",
+    }),
+  });
 
   const previousStatusRef = useRef(status);
 
@@ -118,7 +122,7 @@ export function ChatInterface() {
       ...loaded,
       selectedSessionId: selectedExists
         ? loaded.selectedSessionId
-        : loaded.sessions[0]?.id ?? null,
+        : (loaded.sessions[0]?.id ?? null),
     };
 
     setChatState(hydratedState);
@@ -174,11 +178,16 @@ export function ChatInterface() {
     const defaultTitle = getNextDefaultChatTitle(
       chatState.sessions.map((session) => session.title),
     );
-    const maybeTitle = window.prompt("Choose a title for your chat", defaultTitle);
+    const maybeTitle = window.prompt(
+      "Choose a title for your chat",
+      defaultTitle,
+    );
     if (maybeTitle === null) return;
 
     const title = maybeTitle.trim() || defaultTitle;
-    const duplicate = chatState.sessions.some((session) => session.title === title);
+    const duplicate = chatState.sessions.some(
+      (session) => session.title === title,
+    );
     if (duplicate) {
       setSessionError("A chat with this title already exists.");
       return;
@@ -258,7 +267,7 @@ export function ChatInterface() {
 
       const selectedSessionId =
         previous.selectedSessionId === sessionId
-          ? remainingSessions[0]?.id ?? null
+          ? (remainingSessions[0]?.id ?? null)
           : previous.selectedSessionId;
 
       return {
@@ -270,14 +279,14 @@ export function ChatInterface() {
   };
 
   return (
-    <div className="grid h-[80vh] grid-cols-1 gap-4 lg:grid-cols-[280px_1fr]">
-      <aside className="flex h-full flex-col rounded-lg border border-zinc-800 bg-zinc-950/50 p-3">
+    <div className="flex h-[80vh] flex-col lg:flex-row gap-4 max-w-full">
+      <aside className="flex lg:h-full lg:w-[280px] flex-shrink-0 flex-col rounded-lg border border-zinc-800 bg-zinc-950/50 p-3">
         <Button onClick={handleCreateSession} className="mb-3 w-full">
           <PlusIcon className="mr-2 size-4" />
           New Chat
         </Button>
 
-        <div className="flex-1 space-y-2 overflow-y-auto pr-1">
+        <div className="flex-1 max-w-full space-y-2 overflow-y-auto pr-1">
           {chatState.sessions.map((session) => {
             const isActive = session.id === chatState.selectedSessionId;
 
@@ -297,7 +306,7 @@ export function ChatInterface() {
                 >
                   {session.title}
                 </button>
-                <div className="mt-2 flex gap-2">
+                <div className="mt-2 flex gap-2 justify-end">
                   <Button
                     type="button"
                     variant="ghost"
@@ -323,7 +332,7 @@ export function ChatInterface() {
         </div>
       </aside>
 
-      <div className="flex h-full flex-col">
+      <div className="flex h-full flex-col flex-1 min-w-0">
         <Conversation className="flex-1">
           <ConversationContent>
             {messages.length === 0 ? (
@@ -365,7 +374,9 @@ export function ChatInterface() {
                             />
                             <ToolContent>
                               <ToolInput
-                                input={toolPart.input as Record<string, unknown>}
+                                input={
+                                  toolPart.input as Record<string, unknown>
+                                }
                               />
                               <ToolOutput
                                 output={toolPart.output}
@@ -415,11 +426,7 @@ export function ChatInterface() {
           <PromptInputFooter>
             <PromptInputTools>
               {!isBusy && messages.length > 0 ? (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => regenerate()}
-                >
+                <Button variant="ghost" size="sm" onClick={() => regenerate()}>
                   Regenerate
                 </Button>
               ) : null}
