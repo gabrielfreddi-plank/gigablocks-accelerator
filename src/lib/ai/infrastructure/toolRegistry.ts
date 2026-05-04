@@ -4,18 +4,30 @@ import type {
 } from "@/lib/ai/ports/toolRegistry";
 import {
   calculatorTool,
+  createDeleteMemoryTool,
+  createFetchMemoriesTool,
+  createSaveMemoryTool,
+  createUpdateMemoryTool,
   getCurrentTimeTool,
   urlExtractTool,
   webSearchTool,
 } from "./tools";
 
 export class ToolRegistry implements ToolRegistryPort {
-  private readonly definitions: ToolDefinition[] = [
-    getCurrentTimeTool,
-    calculatorTool,
-    webSearchTool,
-    urlExtractTool,
-  ];
+  private readonly definitions: ToolDefinition[];
+
+  constructor(userId: string) {
+    this.definitions = [
+      getCurrentTimeTool,
+      calculatorTool,
+      webSearchTool,
+      urlExtractTool,
+      createFetchMemoriesTool(userId),
+      createSaveMemoryTool(userId),
+      createUpdateMemoryTool(userId),
+      createDeleteMemoryTool(userId),
+    ];
+  }
 
   getDefinitions(): ToolDefinition[] {
     return this.definitions;
