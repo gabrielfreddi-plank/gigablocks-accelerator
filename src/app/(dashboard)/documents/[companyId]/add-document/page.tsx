@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState, useTransition, useRef } from "react";
+import { useActionState, useEffect, useState, useTransition, useRef } from "react";
 import { useParams } from "next/navigation";
 import { extractPolicies, type Policy } from "@/lib/actions/extractPolicies";
 import { addDocument, checkDocumentExists } from "@/lib/actions/documents";
@@ -75,7 +75,19 @@ export default function AddDocumentPage() {
   const [extractPoliciesToggle, setExtractPoliciesToggle] = useState(false);
   const [checkError, setCheckError] = useState<string | null>(null);
   const [checking, startChecking] = useTransition();
+  const [showIndexedFlash, setShowIndexedFlash] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
+
+  // UI-SPEC submit-button label cycle:
+  //   Save document → Saving and indexing… → Indexed (≈800ms) → banner
+  // Hold the "Indexed" label briefly after a successful submit so the user
+  // perceives the success state before the form swaps out for the banner.
+  useEffect(() => {
+    if (!submitState.success) return;
+    setShowIndexedFlash(true);
+    const t = setTimeout(() => setShowIndexedFlash(false), 800);
+    return () => clearTimeout(t);
+  }, [submitState.success]);
 
   async function handleExtractSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -295,11 +307,11 @@ export default function AddDocumentPage() {
 
           {extractState.policies && extractState.policies.length > 0 && (
             <div className="mt-6 pt-4 border-t border-zinc-800">
-              {submitState.success ? (
+              {submitState.success && !showIndexedFlash ? (
                 <div className="flex items-center gap-3">
                   <div className="flex-1 rounded-[10px] border border-green-800 bg-green-950/40 px-5 py-3">
                     <p className="text-green-400 font-medium text-sm">
-                      Indexed — Document indexed and ready for research.
+                      Document indexed and ready for research.
                     </p>
                   </div>
                   <Button
@@ -328,10 +340,14 @@ export default function AddDocumentPage() {
                   )}
                   <Button
                     type="submit"
-                    disabled={submitPending}
+                    disabled={submitPending || submitState.success}
                     className="w-full bg-blue-600 hover:bg-blue-500 text-white border-transparent px-6 py-2.5 h-auto rounded-[10px] font-medium transition-colors"
                   >
-                    {submitPending ? "Saving and indexing…" : "Save document"}
+                    {submitState.success
+                      ? "Indexed"
+                      : submitPending
+                        ? "Saving and indexing…"
+                        : "Save document"}
                   </Button>
                 </form>
               )}

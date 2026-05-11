@@ -44,15 +44,33 @@ export async function extractPolicies(
     };
   }
 
-  const client = new Anthropic({ apiKey: resolvedKey });
-  const model = "claude-haiku-4-5";
+  const client = new Anthropic({
+    apiKey: resolvedKey,
+    baseURL: process.env.ANTHROPIC_BASE_URL,
+    authToken: process.env.ANTHROPIC_AUTH_TOKEN,
+  });
+  const model = process.env.MODEL_NAME ?? "claude-haiku-4-5";
 
-  const systemPrompt =
-    "You are an IT policy extraction assistant. Extract all IT-related policies from the provided document. " +
-    "IT-related policies include: information security rules, access control and authorization, password and credential policies, " +
-    "data classification and handling, network security, device management, software licensing, incident response, " +
-    "acceptable use policies, backup and recovery, and compliance requirements. " +
-    "If no IT-related policies are found, return an empty array.";
+  const systemPrompt = `You are an IT policy extraction assistant. Extract all IT-related policies from the provided document.
+    IT-related policies include: information security rules, access control and authorization, password and credential policies,
+    data classification and handling, network security, device management, software licensing, incident response,
+    acceptable use policies, backup and recovery, and compliance requirements.
+    If no IT-related policies are found, return an empty array. Do not add line breaks or any other formatting to the final response.
+    
+    <sample>
+    {
+      "title": "Password and Credential Policy",
+      "summary": "This policy outlines the requirements for passwords and credentials used by the organization.",
+      "requirements": [
+        "Passwords must be at least 8 characters long.",
+        "Passwords must contain at least one uppercase letter.",
+        "Passwords must contain at least one lowercase letter.",
+        "Passwords must contain at least one number.",
+        "Passwords must contain at least one special character.",
+      ]
+    }
+    </sample>
+    `;
 
   try {
     const message = await client.messages.create({
@@ -83,6 +101,7 @@ export async function extractPolicies(
       temperature: 0.2,
       output_config: {
         format: zodOutputFormat(z.array(policySchema)),
+        effort: "low",
       },
     });
 
@@ -92,8 +111,11 @@ export async function extractPolicies(
       );
     }
 
-    const firstBlock = message.content[0];
-    if (!firstBlock || firstBlock.type !== "text") {
+    const responseTextBlocks = message.content.filter(
+      (block) => block.type === "text",
+    );
+    const firstBlock = responseTextBlocks[0];
+    if (!firstBlock) {
       throw new Error(
         "Error extracting policies: Unexpected response format from LLM",
       );
