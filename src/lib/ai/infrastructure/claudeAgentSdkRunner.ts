@@ -359,7 +359,11 @@ export class ClaudeAgentSdkRunner implements OrchestratorRunnerPort {
         agent: pickOrchestratorSlug(),
         agents: orchestratorAgents,
         mcpServers: { rag },
-        tools: [],
+        // `tools: []` disables ALL built-in tools per SDK docs — including
+        // `Agent`, which the orchestrator needs to delegate to sub-agents.
+        // Enable only the Agent built-in; MCP tools are auto-registered via
+        // `mcpServers` and are filtered by `allowedTools` below.
+        tools: ["Agent"],
         allowedTools: ["Agent", "mcp__rag__ls", "mcp__rag__cat", "mcp__rag__search", "mcp__rag__find"],
         settingSources: [],
         maxTurns: 6,
