@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { runResearchStream } from "@/lib/ai/application/runResearchStream";
 import { researchRequestSchema } from "@/lib/ai/contracts/researchSchema";
+import { ClaudeAgentSdkRunner } from "@/lib/ai/infrastructure/claudeAgentSdkRunner";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -68,10 +69,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const runner = new ClaudeAgentSdkRunner({ apiKey });
     const stream = runResearchStream({
       query: parsedBody.data.query,
       companyId: parsedBody.data.companyId,
       userId: user.id,
+      runner,
     });
 
     return createUIMessageStreamResponse({ stream });
