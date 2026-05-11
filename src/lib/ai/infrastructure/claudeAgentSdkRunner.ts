@@ -389,14 +389,22 @@ export class ClaudeAgentSdkRunner implements OrchestratorRunnerPort {
               "mcp_servers:",
               msg.mcp_servers,
             );
-            const tools = msg.tools ?? [];
-            const hasAgent = tools.includes("Agent");
-            const hasRag = tools.some((t) => t.startsWith("mcp__rag__"));
-            if (!hasAgent || !hasRag) {
+            // When running with a custom `agent` + `agents` map, the SDK's
+            // top-level system.init `tools` may be empty — each agent
+            // definition carries its own tool list. The reliable signal that
+            // the rag tools will be available is the rag MCP server being
+            // connected.
+            const mcpServers =
+              (msg as { mcp_servers?: Array<{ name: string; status: string }> })
+                .mcp_servers ?? [];
+            const ragConnected = mcpServers.some(
+              (s) => s.name === "rag" && s.status === "connected",
+            );
+            if (!ragConnected) {
               queue.push({
                 kind: "run-error",
                 message:
-                  "Orchestrator setup error: Agent or mcp__rag__* tools missing from the SDK tool list. Check claudeAgentSdkRunner Options.",
+                  "Orchestrator setup error: rag MCP server is not connected. Check claudeAgentSdkRunner Options.",
               });
               queue.close();
               return;
