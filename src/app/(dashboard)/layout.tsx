@@ -45,6 +45,12 @@ export default async function DashboardLayout({
               >
                 Canvas
               </Link>
+              <Link
+                href="/research"
+                className="text-zinc-400 hover:text-zinc-200"
+              >
+                Research
+              </Link>
             </div>
           </nav>
           <form action={signOut}>
