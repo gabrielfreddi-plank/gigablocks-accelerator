@@ -279,3 +279,122 @@ export async function matchChunks(
 
   return (data ?? []) as MatchedChunk[];
 }
+
+/* -----------------------------------------------------------------------------
+ * Plan 01-03 read-side helpers — consumed by the RAG specialist's ls/cat/find
+ * tools at `src/lib/ai/infrastructure/tools/rag/*`.
+ *
+ * Each helper is `companyId`-scoped at the SELECT so RLS via
+ * `is_company_member(company_id)` is the security boundary; the closure-baked
+ * `ctx.companyId` in each tool factory makes cross-company calls structurally
+ * impossible at the client.
+ * ---------------------------------------------------------------------------*/
+
+/**
+ * Return the de-duplicated list of paths under the given prefix for a single
+ * company. Used by `mcp__rag__ls` (prefix = "/foo/") and by `mcp__rag__find`
+ * (prefix = "/" for full-corpus glob filtering).
+ */
+export async function listPathsByCompany(
+  companyId: string,
+  prefix: string,
+): Promise<string[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("documents")
+    .select("path")
+    .eq("company_id", companyId)
+    .not("path", "is", null)
+    .like("path", `${prefix}%`);
+
+  if (error) {
+    throw new Error(`listPathsByCompany failed: ${error.message}`);
+  }
+
+  const seen = new Set<string>();
+  for (const row of data ?? []) {
+    if (row.path) seen.add(row.path);
+  }
+  return Array.from(seen);
+}
+
+/**
+ * Look up a single document by company + path. Returns `null` if no row
+ * matches (the SDK-form `cat` tool surfaces this as `isError: true`).
+ */
+export async function getDocumentByPath(
+  companyId: string,
+  path: string,
+): Promise<{ id: string; name: string; original_content: string } | null> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("documents")
+    .select("id, name, original_content")
+    .eq("company_id", companyId)
+    .eq("path", path)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`getDocumentByPath failed: ${error.message}`);
+  }
+  if (!data) return null;
+  return {
+    id: data.id,
+    name: data.name,
+    original_content: data.original_content ?? "",
+  };
+}
+
+export interface LiteralSearchParams {
+  companyId: string;
+  query: string;
+  pathPrefix?: string;
+  matchCount?: number;
+}
+
+export interface LiteralSearchHit {
+  chunk_id: number;
+  document_id: string;
+  path: string;
+  snippet: string;
+}
+
+/**
+ * Literal `ILIKE '%query%'` search across `document_chunks.content` for a
+ * single company. Used by the `mcp__rag__search` tool in the `literal` and
+ * `auto` modes — the `semantic` branch goes through `matchChunks` above.
+ *
+ * Snippet truncation mirrors the `match_chunks` RPC: `LEFT(content, 400)`.
+ */
+export async function literalSearchChunks(
+  params: LiteralSearchParams,
+): Promise<LiteralSearchHit[]> {
+  const supabase = await createClient();
+
+  let qb = supabase
+    .from("document_chunks")
+    .select("id, document_id, path, content")
+    .eq("company_id", params.companyId)
+    .ilike("content", `%${params.query}%`);
+
+  if (params.pathPrefix) {
+    qb = qb.like("path", `${params.pathPrefix}%`);
+  }
+
+  const { data, error } = await qb
+    .order("created_at", { ascending: false })
+    .limit(params.matchCount ?? 5);
+
+  if (error) {
+    throw new Error(`literalSearchChunks failed: ${error.message}`);
+  }
+
+  return (data ?? []).map((row) => ({
+    chunk_id: row.id,
+    document_id: row.document_id,
+    path: row.path ?? "",
+    snippet: (row.content ?? "").slice(0, 400),
+  }));
+}
