@@ -32,7 +32,10 @@ export async function extractPolicies(
     return { policies: null, error: "Document content is required" };
   }
 
-  const resolvedKey = apiKey?.trim() || process.env.ANTHROPIC_API_KEY;
+  const resolvedKey =
+    apiKey?.trim() ||
+    process.env.ANTHROPIC_API_KEY ||
+    process.env.ANTHROPIC_AUTH_TOKEN;
   if (!resolvedKey) {
     return {
       policies: null,

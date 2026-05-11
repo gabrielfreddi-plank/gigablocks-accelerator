@@ -6,14 +6,19 @@ import type {
   ChatModelStreamParams,
 } from "@/lib/ai/ports/chatModel";
 
-const DEFAULT_MODEL = "claude-haiku-4-5";
+const DEFAULT_MODEL = process.env.MODEL_NAME ?? "claude-haiku-4-5";
 // const DEFAULT_MODEL = "claude-sonnet-4-6";
 
 export class AnthropicChatModel implements ChatModelPort {
   private readonly client: Anthropic;
 
   constructor(apiKey: string) {
-    this.client = new Anthropic({ apiKey });
+    this.client = new Anthropic({
+      apiKey,
+      baseURL: process.env.ANTHROPIC_BASE_URL,
+      authToken: process.env.ANTHROPIC_AUTH_TOKEN,
+    });
+    console.log("Anthropic client initialized with model:", DEFAULT_MODEL);
   }
 
   async stream(params: ChatModelStreamParams): Promise<Message> {
