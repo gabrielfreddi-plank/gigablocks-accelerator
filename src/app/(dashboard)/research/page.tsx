@@ -16,6 +16,10 @@ import {
   PromptInputTools,
   type PromptInputMessage,
 } from "@/components/ai-elements/prompt-input";
+import {
+  ActivityLogRow,
+  type ActivityEventData,
+} from "@/components/research/ActivityLogRow";
 import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
 
@@ -83,11 +87,8 @@ export default function ResearchPage() {
   const lastMessage = messages.at(-1);
   type ActivityPart = {
     type: "data-activity";
-    data?: {
-      agent?: unknown;
-      label?: unknown;
-      ts?: unknown;
-    };
+    id?: string;
+    data?: Partial<ActivityEventData>;
   };
 
   const activityParts: ActivityPart[] =
@@ -169,6 +170,25 @@ export default function ResearchPage() {
         </div>
       ) : null}
 
+      {/* Empty-corpus hint — surfaces if a run errors with "no documents".
+         A future plan can promote this to a server-side pre-fetch banner. */}
+      {error && /no documents/i.test(error.message ?? "") ? (
+        <div className="rounded-[10px] border border-zinc-800 bg-zinc-900/60 px-5 py-4">
+          <p className="text-sm font-medium text-zinc-200">
+            No documents in your corpus yet.
+          </p>
+          <p className="mt-1 text-sm text-zinc-400">
+            Add at least one document before running research.{" "}
+            <Link
+              href={`/documents/${companyId}/add-document`}
+              className="text-blue-400 underline hover:text-blue-300"
+            >
+              Add a document
+            </Link>
+          </p>
+        </div>
+      ) : null}
+
       {/* Prompt input */}
       <PromptInput onSubmit={handleSubmit}>
         <PromptInputBody>
@@ -221,34 +241,39 @@ export default function ResearchPage() {
               you submit a question.
             </p>
           ) : (
-            <ul className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2">
               {activityParts.map((part, i) => {
-                const agent =
-                  typeof part.data?.agent === "string"
-                    ? part.data.agent
-                    : "agent";
-                const label =
-                  typeof part.data?.label === "string"
-                    ? part.data.label
-                    : "(activity)";
+                const data: ActivityEventData = {
+                  agent:
+                    typeof part.data?.agent === "string"
+                      ? part.data.agent
+                      : "agent",
+                  label:
+                    typeof part.data?.label === "string"
+                      ? part.data.label
+                      : "(activity)",
+                  ts:
+                    typeof part.data?.ts === "number" ? part.data.ts : 0,
+                  icon: part.data?.icon,
+                  status: part.data?.status,
+                  durationMs: part.data?.durationMs,
+                  input: part.data?.input,
+                  output: part.data?.output,
+                };
                 return (
-                  <li
-                    key={i}
-                    className="rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-300"
-                  >
-                    <span className="font-medium text-zinc-200">{agent}</span>
-                    <span className="mx-1 text-zinc-500">—</span>
-                    <span className="text-zinc-400">{label}</span>
-                  </li>
+                  <ActivityLogRow
+                    key={part.id ?? i}
+                    activity={data}
+                  />
                 );
               })}
               {isBusy ? (
-                <li className="flex items-center gap-2 px-3 py-2 text-sm text-zinc-500">
+                <div className="flex items-center gap-2 px-3 py-2 text-sm text-zinc-500">
                   <Spinner className="text-blue-400" />
                   <span>working…</span>
-                </li>
+                </div>
               ) : null}
-            </ul>
+            </div>
           )}
         </section>
 
