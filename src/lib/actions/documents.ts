@@ -5,8 +5,10 @@ import { redirect } from "next/navigation";
 
 import {
   DocumentPathConflictError,
-  insertDocumentWithPath,
+  insertDocumentWithChunks,
 } from "@/lib/documents/documentRepository";
+import { chunkText } from "@/lib/ai/infrastructure/embedding/chunkText";
+import { embedBatch } from "@/lib/ai/infrastructure/embedding/voyageEmbedding";
 
 export interface AddDocumentState {
   error: string | null;
@@ -94,41 +96,78 @@ export async function addDocument(
   // path is guaranteed non-null after validatePath().
   const safePath = path as string;
 
+  // 1. Chunk in memory (pure function — no I/O, no errors except OOM).
+  const chunks = chunkText(originalContent);
+  if (chunks.length === 0) {
+    return {
+      error:
+        "Document content produced no chunks. Add at least one paragraph of text.",
+      success: false,
+    };
+  }
+
+  // 2. Embed all chunks in one Voyage batch call. Wrap in try/catch so a
+  // Voyage failure surfaces as the UI-SPEC `Indexing failed: …` string
+  // and does NOT write a parent documents row (we haven't called
+  // insertDocumentWithChunks yet — the embed happens BEFORE the parent
+  // insert, per D-11).
+  let embeddings: number[][];
   try {
-    await insertDocumentWithPath({
+    embeddings = await embedBatch(chunks);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return {
+      error: `Indexing failed: ${message}. The document was not saved.`,
+      success: false,
+    };
+  }
+
+  // Defensive: Voyage MUST return one embedding per input. If it returns
+  // a different count we can't safely map chunks → embeddings; abort.
+  if (embeddings.length !== chunks.length) {
+    return {
+      error: `Indexing failed: Voyage returned ${embeddings.length} embeddings for ${chunks.length} chunks. The document was not saved.`,
+      success: false,
+    };
+  }
+
+  const chunkInputs = chunks.map((content, index) => ({
+    index,
+    content,
+    embedding: embeddings[index]!,
+  }));
+
+  // 3. Transactional parent + chunks insert with compensating delete on
+  // chunks-insert failure (per documentRepository).
+  try {
+    await insertDocumentWithChunks({
       companyId,
       name,
       originalContent,
       path: safePath,
+      chunks: chunkInputs,
     });
   } catch (err) {
     if (err instanceof DocumentPathConflictError) {
       return { error: err.message, success: false };
     }
+    const message = err instanceof Error ? err.message : "Failed to save document";
     return {
-      error: err instanceof Error ? err.message : "Failed to save document",
+      error: `Indexing failed: ${message}. The document was not saved.`,
       success: false,
     };
   }
 
-  // Plan 1 stub for the chunk + embed step (RESEARCH.md §"Plan 1 — Walking
-  // Skeleton" item 7). Plan 2 replaces this console.log with the real
-  // Voyage embedding + chunk-insert pipeline. We log only the path and
-  // content length — never the content itself — per T-01-08.
-  console.log("[plan-01] would chunk + embed document", {
-    path: safePath,
-    contentLen: originalContent.length,
-  });
-
-  // Optional policy-extraction toggle (D-10). The existing extractPolicies
+  // 4. Optional policy-extraction toggle (D-10). The existing extractPolicies
   // server action keeps its own error envelope; Plan 01 deliberately does
-  // not refactor it (CONTEXT.md `<deferred>`).
+  // not refactor it (CONTEXT.md `<deferred>`). Non-blocking — if it fails
+  // the save still succeeds.
   if (extractPoliciesToggle) {
     try {
       const { extractPolicies } = await import("./extractPolicies");
       await extractPolicies(null, formData);
     } catch (err) {
-      console.error("[plan-01] extractPolicies failed (non-blocking)", err);
+      console.error("[plan-02] extractPolicies failed (non-blocking)", err);
     }
   }
 

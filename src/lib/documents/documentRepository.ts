@@ -2,12 +2,19 @@ import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/supabase/types";
 
 /**
- * Document repository — typed CRUD over the `documents` table.
+ * Document repository — typed CRUD over the `documents` table and
+ * `document_chunks` semantic-search RPC.
  *
  * Exports:
  *  - `checkPathExists(companyId, path)` — pre-insert lookup.
- *  - `insertDocumentWithPath(input)` — parent-row insert with collision detection.
- *  - `DocumentPathConflictError`, `DocumentNotFoundError`, `isUniqueViolation` — error helpers.
+ *  - `insertDocumentWithPath(input)` — Plan 1 parent-only insert (deprecated;
+ *    superseded by `insertDocumentWithChunks` from Plan 2).
+ *  - `insertDocumentWithChunks(input)` — Plan 2 transactional insert with
+ *    compensating-delete on chunks-insert failure (D-11).
+ *  - `matchChunks(params)` — wraps the `match_chunks` Postgres RPC for
+ *    semantic search (Plan 3 consumes this from the RAG specialist tools).
+ *  - `DocumentPathConflictError`, `DocumentNotFoundError`, `isUniqueViolation`
+ *    — error helpers.
  */
 
 export type Document = Database["public"]["Tables"]["documents"]["Row"];
@@ -63,10 +70,8 @@ export async function checkPathExists(
   const { data } = await supabase
     .from("documents")
     .select("id")
-    // The `path` column ships in migration 005; the generated types may lag
-    // until Task 6 regenerates them, so cast through unknown for safety.
     .eq("company_id", companyId)
-    .eq("path" as never, path as never)
+    .eq("path", path)
     .maybeSingle();
 
   return !!data;
@@ -80,26 +85,25 @@ export interface InsertDocumentWithPathInput {
 }
 
 /**
- * Inserts a single documents row carrying the new `path` column.
+ * @deprecated Use {@link insertDocumentWithChunks} instead. Plan 1 surface
+ * retained only for migration safety; the Plan 2 server action no longer
+ * calls this.
  *
- * Plan 1 scope: parent row only — the chunk + embed pipeline ships in Plan 2
- * and replaces this function with a transactional `insertDocumentWithChunks`.
- *
- * Translates Postgres 23505 (unique violation) into the typed
- * DocumentPathConflictError so server actions can map it to the
- * UI-SPEC collision-error string.
+ * Inserts a single documents row carrying the new `path` column. Plan 1
+ * scope: parent row only, no chunks. Translates Postgres 23505 (unique
+ * violation) into the typed DocumentPathConflictError.
  */
 export async function insertDocumentWithPath(
   input: InsertDocumentWithPathInput,
 ): Promise<{ id: string }> {
   const supabase = await createClient();
 
-  const insertPayload = {
+  const insertPayload: Database["public"]["Tables"]["documents"]["Insert"] = {
     company_id: input.companyId,
     name: input.name,
     original_content: input.originalContent,
     path: input.path,
-  } as unknown as Database["public"]["Tables"]["documents"]["Insert"];
+  };
 
   const { data, error } = await supabase
     .from("documents")
@@ -116,4 +120,162 @@ export async function insertDocumentWithPath(
 
   if (!data) throw new DocumentNotFoundError();
   return { id: data.id };
+}
+
+export interface InsertDocumentChunkInput {
+  index: number;
+  content: string;
+  embedding: number[];
+}
+
+export interface InsertDocumentWithChunksInput {
+  companyId: string;
+  name: string;
+  originalContent: string;
+  path: string;
+  chunks: InsertDocumentChunkInput[];
+}
+
+/**
+ * Insert the parent `documents` row + N `document_chunks` rows.
+ *
+ * D-11 ordering: parent insert → chunks insert. On chunks-insert failure,
+ * compensating-delete the parent row so retry-on-same-path doesn't get
+ * stuck on a partial-unique-index collision against an orphan row.
+ *
+ * The Supabase-JS client does NOT expose `BEGIN`/`COMMIT`, so this is a
+ * best-effort two-step. If the compensating delete itself errors, we log
+ * it and re-throw the ORIGINAL chunk-insert error so the user sees the
+ * real cause; the next save attempt to the same path will then fail
+ * loudly via the partial unique index — visible failure, not silent
+ * corruption (threat T-02-05 accepted in 01-02-PLAN.md).
+ */
+export async function insertDocumentWithChunks(
+  input: InsertDocumentWithChunksInput,
+): Promise<{ id: string }> {
+  const supabase = await createClient();
+
+  // 1. Parent insert.
+  const documentPayload: Database["public"]["Tables"]["documents"]["Insert"] = {
+    company_id: input.companyId,
+    name: input.name,
+    original_content: input.originalContent,
+    path: input.path,
+  };
+
+  const { data: parent, error: parentError } = await supabase
+    .from("documents")
+    .insert(documentPayload)
+    .select("id")
+    .single();
+
+  if (parentError) {
+    if (isUniqueViolation(parentError)) {
+      throw new DocumentPathConflictError(input.path);
+    }
+    throw new Error(parentError.message);
+  }
+  if (!parent) throw new DocumentNotFoundError();
+
+  const parentId = parent.id;
+
+  // 2. Chunks insert (skip if no chunks — should never happen for non-empty
+  // content but a defensive no-op is cheap).
+  if (input.chunks.length === 0) {
+    return { id: parentId };
+  }
+
+  const chunkRows: Database["public"]["Tables"]["document_chunks"]["Insert"][] =
+    input.chunks.map((c) => ({
+      document_id: parentId,
+      company_id: input.companyId,
+      chunk_index: c.index,
+      path: input.path,
+      content: c.content,
+      // Postgres `vector(N)` accepts the literal `[v1, v2, ...]` string
+      // representation. Casting via `as unknown as string` satisfies the
+      // generated Insert type, which models the column as `string` because
+      // pgvector serialises as text on the wire.
+      embedding: `[${c.embedding.join(",")}]` as unknown as string,
+    }));
+
+  const { error: chunksError } = await supabase
+    .from("document_chunks")
+    .insert(chunkRows);
+
+  if (chunksError) {
+    // Compensating delete — best-effort.
+    const { error: cleanupError } = await supabase
+      .from("documents")
+      .delete()
+      .eq("id", parentId);
+    if (cleanupError) {
+      console.error(
+        "[documentRepository] compensating delete failed after chunks-insert error",
+        { parentId, cleanupError: cleanupError.message },
+      );
+    }
+    throw new Error(`document_chunks insert failed: ${chunksError.message}`);
+  }
+
+  return { id: parentId };
+}
+
+export interface MatchChunksParams {
+  queryEmbedding: number[];
+  companyId: string;
+  pathPrefix?: string;
+  matchCount?: number;
+}
+
+export interface MatchedChunk {
+  chunk_id: number;
+  document_id: string;
+  path: string;
+  snippet: string;
+  similarity: number;
+}
+
+/**
+ * Semantic-search wrapper over the `match_chunks` RPC (migration 006).
+ *
+ * RLS enforcement: `match_chunks` is declared `SECURITY INVOKER`, so the
+ * underlying `document_chunks` SELECT runs as the caller and
+ * `is_company_member(company_id)` strips cross-company rows regardless of
+ * what `companyId` is passed. Plan 4 adds a belt-and-braces runtime
+ * assertion at the runner edge.
+ *
+ * Default `matchCount` is 5 per AI-SPEC §4 ("Context Window Strategy:
+ * search should never return more than 5 hits per call").
+ */
+export async function matchChunks(
+  params: MatchChunksParams,
+): Promise<MatchedChunk[]> {
+  const supabase = await createClient();
+
+  // The generated `Database["public"]["Functions"]` map does NOT yet contain
+  // `match_chunks` — that entry only appears after Task 4 regenerates types
+  // post-migration. Cast the client through `unknown` so the `.rpc()` call
+  // type-checks against a permissive signature for the brief Task 2 → Task 4
+  // window. After Task 4 regen the cast becomes a no-op and can stay or be
+  // dropped; leaving it in place avoids churn if the types diverge again.
+  const supabaseRpc = supabase as unknown as {
+    rpc: (
+      fn: string,
+      args: Record<string, unknown>,
+    ) => Promise<{ data: unknown; error: { message: string } | null }>;
+  };
+
+  const { data, error } = await supabaseRpc.rpc("match_chunks", {
+    query_embedding: `[${params.queryEmbedding.join(",")}]`,
+    match_count: params.matchCount ?? 5,
+    filter_company: params.companyId,
+    filter_path_prefix: params.pathPrefix ?? null,
+  });
+
+  if (error) {
+    throw new Error(`match_chunks RPC failed: ${error.message}`);
+  }
+
+  return (data ?? []) as MatchedChunk[];
 }
