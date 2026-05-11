@@ -234,6 +234,21 @@ export type Database = {
         Returns: boolean
       }
       list_public_schema_detail: { Args: never; Returns: Json }
+      match_chunks: {
+        Args: {
+          filter_company?: string
+          filter_path_prefix?: string
+          match_count?: number
+          query_embedding: string
+        }
+        Returns: {
+          chunk_id: number
+          document_id: string
+          path: string
+          similarity: number
+          snippet: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
