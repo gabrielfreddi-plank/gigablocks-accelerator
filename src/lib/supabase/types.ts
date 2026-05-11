@@ -82,6 +82,54 @@ export type Database = {
           },
         ]
       }
+      document_chunks: {
+        Row: {
+          chunk_index: number
+          company_id: string
+          content: string
+          created_at: string
+          document_id: string
+          embedding: string
+          id: number
+          path: string
+        }
+        Insert: {
+          chunk_index: number
+          company_id: string
+          content: string
+          created_at?: string
+          document_id: string
+          embedding: string
+          id?: number
+          path: string
+        }
+        Update: {
+          chunk_index?: number
+          company_id?: string
+          content?: string
+          created_at?: string
+          document_id?: string
+          embedding?: string
+          id?: number
+          path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_chunks_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_chunks_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       documents: {
         Row: {
           company_id: string
@@ -89,6 +137,7 @@ export type Database = {
           id: string
           name: string
           original_content: string | null
+          path: string | null
           updated_at: string
         }
         Insert: {
@@ -97,6 +146,7 @@ export type Database = {
           id?: string
           name: string
           original_content?: string | null
+          path?: string | null
           updated_at?: string
         }
         Update: {
@@ -105,6 +155,7 @@ export type Database = {
           id?: string
           name?: string
           original_content?: string | null
+          path?: string | null
           updated_at?: string
         }
         Relationships: [
