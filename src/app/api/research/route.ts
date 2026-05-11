@@ -59,17 +59,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    const useClaudeLogin = process.env.RESEARCH_USE_CLAUDE_LOGIN === "true";
     const apiKey =
       process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN;
-    if (!apiKey) {
-      console.error("ANTHROPIC_API_KEY is not configured.");
+    if (!useClaudeLogin && !apiKey) {
+      console.error(
+        "ANTHROPIC_API_KEY is not configured (and RESEARCH_USE_CLAUDE_LOGIN is not set).",
+      );
       return NextResponse.json(
         { error: "AI Model is currently unavailable" },
         { status: 500 },
       );
     }
 
-    const runner = new ClaudeAgentSdkRunner({ apiKey });
+    const runner = new ClaudeAgentSdkRunner({
+      apiKey: useClaudeLogin ? undefined : apiKey,
+    });
     const stream = runResearchStream({
       query: parsedBody.data.query,
       companyId: parsedBody.data.companyId,

@@ -198,7 +198,29 @@ function isPartialAssistant(
  * ---------------------------------------------------------------------------*/
 
 export interface ClaudeAgentSdkRunnerOptions {
-  apiKey: string;
+  apiKey?: string;
+}
+
+function buildSdkEnv(
+  companyId: string,
+  apiKey: string | undefined,
+): NodeJS.ProcessEnv {
+  // When RESEARCH_USE_CLAUDE_LOGIN=true, the SDK auths via the locally
+  // logged-in `claude` CLI (OAuth, e.g. Max plan). API key + auth-token +
+  // base-url env vars short-circuit that path, so strip them.
+  if (process.env.RESEARCH_USE_CLAUDE_LOGIN === "true") {
+    const env: NodeJS.ProcessEnv = { ...process.env };
+    delete env.ANTHROPIC_API_KEY;
+    delete env.ANTHROPIC_AUTH_TOKEN;
+    delete env.ANTHROPIC_BASE_URL;
+    env.RESEARCH_COMPANY_ID = companyId;
+    return env;
+  }
+  return {
+    ...process.env,
+    RESEARCH_COMPANY_ID: companyId,
+    ...(apiKey ? { ANTHROPIC_API_KEY: apiKey } : {}),
+  };
 }
 
 export class ClaudeAgentSdkRunner implements OrchestratorRunnerPort {
@@ -346,11 +368,7 @@ export class ClaudeAgentSdkRunner implements OrchestratorRunnerPort {
         includeHookEvents: true,
         includePartialMessages: true,
         hooks,
-        env: {
-          ...process.env,
-          RESEARCH_COMPANY_ID: input.companyId,
-          ANTHROPIC_API_KEY: this.opts.apiKey,
-        },
+        env: buildSdkEnv(input.companyId, this.opts.apiKey),
       },
     });
 
