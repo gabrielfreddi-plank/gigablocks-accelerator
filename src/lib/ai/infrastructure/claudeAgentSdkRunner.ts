@@ -44,12 +44,21 @@ import {
   pickOrchestratorSlug,
   specialistsToAgentsRecord,
 } from "@/lib/ai/config/specialists";
+import {
+  lintCitations,
+  type ActivityEvent,
+} from "@/lib/ai/infrastructure/citationLinter";
 import { embed } from "@/lib/ai/infrastructure/embedding/voyageEmbedding";
 import { ragServer } from "@/lib/ai/infrastructure/tools/rag/server";
 import type {
   OrchestratorRunnerPort,
   RunEvent,
 } from "@/lib/ai/ports/orchestratorRunner";
+import {
+  listPathsByCompany,
+  validateChunkIds,
+} from "@/lib/documents/documentRepository";
+import { getPostHogServer } from "@/lib/posthog/server";
 import { createClient } from "@/lib/supabase/server";
 
 /* -----------------------------------------------------------------------------
@@ -231,8 +240,6 @@ export class ClaudeAgentSdkRunner implements OrchestratorRunnerPort {
     companyId: string;
     userId: string;
   }): AsyncIterable<RunEvent> {
-    void input.userId; // currently telemetry-only; reserved for Plan 04.
-
     const supabase = await createClient();
     const ctx = { supabase, companyId: input.companyId, embed };
 
@@ -240,6 +247,63 @@ export class ClaudeAgentSdkRunner implements OrchestratorRunnerPort {
     const queue = new AsyncQueue<RunEvent>();
     const toolStartTimes = new Map<string, number>();
     const toolAgentTypes = new Map<string, string>();
+
+    // AI-SPEC §6 Guardrail #4 — build the per-run company-path allowlist
+    // for the cross-company runtime assertion. Best-effort: if the lookup
+    // itself fails, log to console + continue (RLS is still the primary
+    // boundary; the assertion is belt-and-braces).
+    let companyPaths: Set<string> = new Set();
+    try {
+      const paths = await listPathsByCompany(input.companyId, "/");
+      companyPaths = new Set(paths);
+    } catch (err) {
+      console.error(
+        "[research] cross_company_leak_check_failed",
+        err instanceof Error ? err.message : err,
+      );
+    }
+
+    // Activity history + report accumulator for the citation linter
+    // (Guardrail #5) on SDKResultMessage receipt.
+    const activityHistory: ActivityEvent[] = [];
+    let reportAccum = "";
+
+    // Helper to walk a tool_response.structuredContent and yield every
+    // path string we want to check against the company corpus.
+    const extractPaths = (sc: unknown): string[] => {
+      const out: string[] = [];
+      const visit = (v: unknown): void => {
+        if (!v || typeof v !== "object") return;
+        if (Array.isArray(v)) {
+          for (const item of v) visit(item);
+          return;
+        }
+        const obj = v as Record<string, unknown>;
+        const p = obj.path;
+        if (typeof p === "string") out.push(p);
+        for (const k of Object.keys(obj)) visit(obj[k]);
+      };
+      visit(sc);
+      return out;
+    };
+
+    const extractChunkIds = (sc: unknown): string[] => {
+      const out: string[] = [];
+      const visit = (v: unknown): void => {
+        if (!v || typeof v !== "object") return;
+        if (Array.isArray(v)) {
+          for (const item of v) visit(item);
+          return;
+        }
+        const obj = v as Record<string, unknown>;
+        const c = obj.chunkId;
+        if (typeof c === "string") out.push(c);
+        if (typeof c === "number") out.push(String(c));
+        for (const k of Object.keys(obj)) visit(obj[k]);
+      };
+      visit(sc);
+      return out;
+    };
 
     // Track the active subagent type (set on SubagentStart, cleared on Stop)
     // so PreToolUse callbacks can tag tool-call rows with the right agent
@@ -329,8 +393,55 @@ export class ClaudeAgentSdkRunner implements OrchestratorRunnerPort {
               const resp = r.tool_response as
                 | { isError?: boolean; structuredContent?: unknown; content?: unknown }
                 | undefined;
-              const status: "ok" | "error" = resp?.isError ? "error" : "ok";
-              queue.push({
+              let status: "ok" | "error" = resp?.isError ? "error" : "ok";
+              let leakMessage: string | null = null;
+
+              // Cross-company runtime assertion (AI-SPEC §6 Guardrail #4):
+              // every path / chunkId surfaced by an mcp__rag__* tool must
+              // belong to the requester's company.
+              if (
+                r.tool_name.startsWith("mcp__rag__") &&
+                resp?.structuredContent !== undefined
+              ) {
+                const paths = extractPaths(resp.structuredContent);
+                for (const p of paths) {
+                  if (companyPaths.size > 0 && !companyPaths.has(p)) {
+                    leakMessage = `cross_company_leak: tool ${r.tool_name} returned path '${p}' which is not in the requester's company corpus.`;
+                    break;
+                  }
+                }
+                if (!leakMessage) {
+                  const chunkStrs = extractChunkIds(resp.structuredContent);
+                  const chunkNums = chunkStrs
+                    .map((s) => Number(s))
+                    .filter((n) => Number.isFinite(n));
+                  if (chunkNums.length > 0) {
+                    try {
+                      const valid = await validateChunkIds(
+                        input.companyId,
+                        chunkNums,
+                      );
+                      for (const n of chunkNums) {
+                        if (!valid.has(n)) {
+                          leakMessage = `cross_company_leak: tool ${r.tool_name} returned chunkId '${n}' which does not belong to the requester's company.`;
+                          break;
+                        }
+                      }
+                    } catch (err) {
+                      console.error(
+                        "[research] cross_company_leak_check_failed",
+                        err instanceof Error ? err.message : err,
+                      );
+                    }
+                  }
+                }
+              }
+
+              if (leakMessage) {
+                status = "error";
+              }
+
+              const activity: RunEvent & { kind: "activity" } = {
                 kind: "activity",
                 id: r.tool_use_id,
                 agent,
@@ -340,9 +451,27 @@ export class ClaudeAgentSdkRunner implements OrchestratorRunnerPort {
                 durationMs,
                 input: r.tool_input,
                 output: resp?.structuredContent ?? resp?.content,
+              };
+              queue.push(activity);
+              activityHistory.push({
+                id: activity.id,
+                ts: activity.ts,
+                agent: activity.agent,
+                label: activity.label,
+                status: activity.status,
+                durationMs: activity.durationMs,
+                input: activity.input,
+                output: activity.output,
               });
+
               toolStartTimes.delete(r.tool_use_id);
               toolAgentTypes.delete(r.tool_use_id);
+
+              if (leakMessage) {
+                queue.push({ kind: "run-error", message: leakMessage });
+                queue.close();
+                return { continue: false };
+              }
               return { continue: true };
             },
           ],
@@ -424,6 +553,7 @@ export class ClaudeAgentSdkRunner implements OrchestratorRunnerPort {
             const delta = extractPartialTextDelta(msg);
             if (delta) {
               sawPartialText = true;
+              reportAccum += delta;
               queue.push({ kind: "report-delta", delta });
             }
             continue;
@@ -438,7 +568,10 @@ export class ClaudeAgentSdkRunner implements OrchestratorRunnerPort {
             // never arrived (e.g. includePartialMessages truly off).
             if (!sawPartialText) {
               const text = extractAssistantText(msg);
-              if (text) queue.push({ kind: "report-delta", delta: text });
+              if (text) {
+                reportAccum += text;
+                queue.push({ kind: "report-delta", delta: text });
+              }
             }
             continue;
           }
@@ -455,6 +588,73 @@ export class ClaudeAgentSdkRunner implements OrchestratorRunnerPort {
                       : `Research run failed (${msg.subtype}).`,
               });
             }
+
+            // AI-SPEC §6 Guardrail #5 — citation linter. Phase 1 disposition
+            // is "Flag": append a visible warning block to the report on
+            // non-ok result, do NOT abort the stream.
+            let lintOk = true;
+            try {
+              const lint = lintCitations(
+                reportAccum,
+                activityHistory,
+                companyPaths,
+              );
+              lintOk = lint.ok;
+              if (!lint.ok) {
+                const parts: string[] = ["\n\n> ⚠ Citation lint warnings:"];
+                if (lint.missing.length > 0) {
+                  parts.push(
+                    `> - Missing Sources entries for refs: ${lint.missing
+                      .map((n) => `[${n}]`)
+                      .join(", ")}`,
+                  );
+                }
+                if (lint.unresolvedChunkIds.length > 0) {
+                  parts.push(
+                    `> - Sources entries reference chunkIds that were never surfaced by a tool call: ${lint.unresolvedChunkIds.join(", ")}`,
+                  );
+                }
+                if (lint.unknownPaths.length > 0) {
+                  parts.push(
+                    `> - Sources entries reference paths not in this company's corpus: ${lint.unknownPaths.join(", ")}`,
+                  );
+                }
+                const warning = parts.join("\n");
+                queue.push({ kind: "report-delta", delta: warning });
+              }
+            } catch (err) {
+              console.error(
+                "[research] citation_linter_failed",
+                err instanceof Error ? err.message : err,
+              );
+            }
+
+            // PostHog run-end telemetry (RESEARCH.md OQ-9). Wrap in
+            // try/catch — telemetry must not block the user's stream.
+            try {
+              const ph = getPostHogServer();
+              ph.capture({
+                distinctId: input.userId,
+                event: "research_run_completed",
+                properties: {
+                  company_id: input.companyId,
+                  subtype: msg.subtype,
+                  num_turns: (msg as { num_turns?: number }).num_turns,
+                  duration_ms: (msg as { duration_ms?: number }).duration_ms,
+                  usage: (msg as { usage?: unknown }).usage ?? null,
+                  modelUsage:
+                    (msg as { modelUsage?: unknown }).modelUsage ?? null,
+                  citation_lint_ok: lintOk,
+                },
+              });
+              await ph.flush();
+            } catch (err) {
+              console.error(
+                "[research] posthog_capture_failed",
+                err instanceof Error ? err.message : err,
+              );
+            }
+
             queue.push({ kind: "report-end" });
             emittedReportEnd = true;
             console.log("[research] result", {

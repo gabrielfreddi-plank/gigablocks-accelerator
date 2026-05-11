@@ -347,6 +347,34 @@ export async function getDocumentByPath(
   };
 }
 
+/**
+ * Validate a set of chunk IDs belong to the given company. Used by the
+ * cross-company runtime assertion (AI-SPEC §6 Guardrail #4) in
+ * `claudeAgentSdkRunner.ts` PostToolUse — every `search.hits[].chunkId`
+ * surfaced by a tool must resolve to a row in `document_chunks` with
+ * `company_id = ?`. Returns the set of chunk IDs that DO belong to the
+ * company; missing IDs imply a cross-company leak (or stale/invalid IDs).
+ */
+export async function validateChunkIds(
+  companyId: string,
+  chunkIds: number[],
+): Promise<Set<number>> {
+  if (chunkIds.length === 0) return new Set();
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("document_chunks")
+    .select("id")
+    .eq("company_id", companyId)
+    .in("id", chunkIds);
+
+  if (error) {
+    throw new Error(`validateChunkIds failed: ${error.message}`);
+  }
+
+  return new Set((data ?? []).map((r) => r.id));
+}
+
 export interface LiteralSearchParams {
   companyId: string;
   query: string;
