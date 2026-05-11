@@ -7,6 +7,31 @@ import { addDocument, checkDocumentExists } from "@/lib/actions/documents";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+
+/**
+ * Client-side path validator — mirrors the server-side rules in
+ * `src/lib/actions/documents.ts` (CONTEXT.md D-12).
+ *
+ * Returns the UI-SPEC error string (verbatim) on the first failing rule,
+ * or null when the path is acceptable. The server runs the same checks
+ * regardless of what the client returns — this is UX only.
+ */
+function validatePathClient(path: string): string | null {
+  if (!path) return "Document path is required";
+  if (!path.startsWith("/")) return 'Path must start with "/"';
+  const segments = path.split("/");
+  if (segments.some((segment) => segment === "..")) {
+    return 'Path cannot contain ".." segments';
+  }
+  if (!/^[A-Za-z0-9._\-/]+$/.test(path)) {
+    return 'Path can only contain letters, numbers, "-", "_", ".", and "/"';
+  }
+  if (path.length > 256 || segments.filter(Boolean).length > 8) {
+    return "Path is too long (max 256 characters, 8 segments)";
+  }
+  return null;
+}
 
 function PolicyCard({ policy }: { policy: Policy }) {
   return (
@@ -45,6 +70,9 @@ export default function AddDocumentPage() {
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [path, setPath] = useState("");
+  const [pathError, setPathError] = useState<string | null>(null);
+  const [extractPoliciesToggle, setExtractPoliciesToggle] = useState(false);
   const [checkError, setCheckError] = useState<string | null>(null);
   const [checking, startChecking] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
@@ -62,6 +90,14 @@ export default function AddDocumentPage() {
       return;
     }
 
+    // Path is required and must satisfy D-12 rules.
+    const trimmedPath = path.trim();
+    const localPathError = validatePathClient(trimmedPath);
+    if (localPathError) {
+      setPathError(localPathError);
+      return;
+    }
+
     const exists = await checkDocumentExists(companyId, title.trim());
     if (exists) {
       setCheckError(
@@ -74,6 +110,14 @@ export default function AddDocumentPage() {
       const formData = new FormData(formRef.current!);
       extractDispatch(formData);
     });
+  }
+
+  function handlePathChange(value: string) {
+    setPath(value);
+    // Lazy-validate: only clear the error once the user has changed the value.
+    if (pathError) {
+      setPathError(validatePathClient(value.trim()));
+    }
   }
 
   const extracting = extractPending || checking;
@@ -108,6 +152,27 @@ export default function AddDocumentPage() {
             />
           </div>
 
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="path" className="text-zinc-300 text-sm">
+              Document path
+            </Label>
+            <Input
+              id="path"
+              name="path"
+              placeholder="/research/papers/q4-strategy.md"
+              value={path}
+              onChange={(e) => handlePathChange(e.target.value)}
+              className="bg-zinc-900 border-zinc-700 text-zinc-200 placeholder:text-zinc-500 focus-visible:ring-blue-600 focus-visible:ring-offset-zinc-950"
+            />
+            <p className="text-xs text-zinc-500">
+              Where this document lives in the virtual corpus. Must start with
+              &quot;/&quot;. Letters, numbers, dashes, dots and slashes only.
+            </p>
+            {pathError ? (
+              <p className="text-sm text-red-400">{pathError}</p>
+            ) : null}
+          </div>
+
           <div className="flex flex-col gap-1.5 flex-1 min-h-0">
             <Label htmlFor="content" className="text-zinc-300 text-sm">
               Document Content
@@ -120,6 +185,23 @@ export default function AddDocumentPage() {
               onChange={(e) => setContent(e.target.value)}
               className="flex-1 min-h-[400px] resize-none rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2.5 text-sm text-zinc-200 placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-0 transition-colors"
             />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center gap-3">
+              <Switch
+                id="extractPolicies"
+                checked={extractPoliciesToggle}
+                onCheckedChange={setExtractPoliciesToggle}
+              />
+              <Label htmlFor="extractPolicies" className="text-zinc-300 text-sm">
+                Also extract IT policies
+              </Label>
+            </div>
+            <p className="text-xs text-zinc-500">
+              Runs the existing policy extractor in addition to indexing.
+              Defaults off.
+            </p>
           </div>
 
           <div className="flex flex-col gap-1.5">
@@ -217,7 +299,7 @@ export default function AddDocumentPage() {
                 <div className="flex items-center gap-3">
                   <div className="flex-1 rounded-[10px] border border-green-800 bg-green-950/40 px-5 py-3">
                     <p className="text-green-400 font-medium text-sm">
-                      Document submitted successfully.
+                      Indexed — Document indexed and ready for research.
                     </p>
                   </div>
                   <Button
@@ -233,6 +315,12 @@ export default function AddDocumentPage() {
                   <input type="hidden" name="title" value={title} />
                   <input type="hidden" name="content" value={content} />
                   <input type="hidden" name="companyId" value={companyId} />
+                  <input type="hidden" name="path" value={path} />
+                  <input
+                    type="hidden"
+                    name="extractPolicies"
+                    value={extractPoliciesToggle ? "true" : "false"}
+                  />
                   {submitState.error && (
                     <p className="text-red-400 text-sm mb-3">
                       {submitState.error}
@@ -241,9 +329,9 @@ export default function AddDocumentPage() {
                   <Button
                     type="submit"
                     disabled={submitPending}
-                    className="w-full bg-green-600 hover:bg-green-500 text-white border-transparent px-6 py-2.5 h-auto rounded-[10px] font-medium transition-colors"
+                    className="w-full bg-blue-600 hover:bg-blue-500 text-white border-transparent px-6 py-2.5 h-auto rounded-[10px] font-medium transition-colors"
                   >
-                    {submitPending ? "Submitting..." : "Submit Document"}
+                    {submitPending ? "Saving and indexing…" : "Save document"}
                   </Button>
                 </form>
               )}
