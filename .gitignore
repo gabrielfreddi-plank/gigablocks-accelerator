@@ -57,3 +57,4 @@ blob-report/
 
 # pnpm local store
 .pnpm-store/
+.planning/
