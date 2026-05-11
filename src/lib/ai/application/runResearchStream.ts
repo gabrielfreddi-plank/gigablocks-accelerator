@@ -49,8 +49,11 @@ export function runResearchStream(params: {
                 agent: event.agent,
                 label: event.label,
                 ts: event.ts,
+                icon: event.icon,
                 status: event.status,
                 durationMs: event.durationMs,
+                input: event.input,
+                output: event.output,
               },
             });
             break;
