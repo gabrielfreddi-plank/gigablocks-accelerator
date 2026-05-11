@@ -247,6 +247,7 @@ export class ClaudeAgentSdkRunner implements OrchestratorRunnerPort {
     const queue = new AsyncQueue<RunEvent>();
     const toolStartTimes = new Map<string, number>();
     const toolAgentTypes = new Map<string, string>();
+    const subagentActivityIds = new Map<string, string>();
 
     // AI-SPEC §6 Guardrail #4 — build the per-run company-path allowlist
     // for the cross-company runtime assertion. Best-effort: if the lookup
@@ -317,9 +318,11 @@ export class ClaudeAgentSdkRunner implements OrchestratorRunnerPort {
             async (raw) => {
               const r = raw as SubagentStartHookInput;
               activeSubagentType = r.agent_type;
+              const subagentId = crypto.randomUUID();
+              subagentActivityIds.set(r.agent_type, subagentId);
               queue.push({
                 kind: "activity",
-                id: crypto.randomUUID(),
+                id: subagentId,
                 agent: r.agent_type,
                 label: `${r.agent_type}: starting`,
                 ts: Date.now(),
@@ -335,9 +338,11 @@ export class ClaudeAgentSdkRunner implements OrchestratorRunnerPort {
           hooks: [
             async (raw) => {
               const r = raw as SubagentStopHookInput;
+              const subagentId = subagentActivityIds.get(r.agent_type) ?? crypto.randomUUID();
+              subagentActivityIds.delete(r.agent_type);
               queue.push({
                 kind: "activity",
-                id: crypto.randomUUID(),
+                id: subagentId,
                 agent: r.agent_type,
                 label: `${r.agent_type}: done`,
                 ts: Date.now(),

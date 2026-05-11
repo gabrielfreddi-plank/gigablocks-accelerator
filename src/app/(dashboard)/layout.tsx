@@ -18,6 +18,15 @@ export default async function DashboardLayout({
     redirect("/sign-in");
   }
 
+  const { data: companies } = await supabase
+    .from("company_members")
+    .select("companies(id)")
+    .eq("user_id", user.id)
+    .limit(1);
+
+  const companyId = companies?.[0]?.companies?.id ?? null;
+  const researchHref = companyId ? `/research/${companyId}` : "/dashboard";
+
   return (
     <div className="min-h-screen bg-zinc-950 font-sans text-white">
       <header className="border-b border-zinc-800">
@@ -46,7 +55,7 @@ export default async function DashboardLayout({
                 Canvas
               </Link>
               <Link
-                href="/research"
+                href={researchHref}
                 className="text-zinc-400 hover:text-zinc-200"
               >
                 Research
